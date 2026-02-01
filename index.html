@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Venganza del Profesor Álvaro - El Juego</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0a0a15;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        #game-container {
+            position: relative;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            box-shadow: 0 0 50px rgba(233, 69, 96, 0.3);
+        }
+
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #0a0a15 0%, #1a1a2e 50%, #0a0a15 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading-title {
+            font-size: 28px;
+            color: #e94560;
+            text-shadow: 0 0 10px #e94560, 0 0 20px #e94560, 0 0 40px #e94560;
+            margin-bottom: 10px;
+            animation: glow 2s ease-in-out infinite;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .loading-subtitle {
+            font-size: 12px;
+            color: #4ecca3;
+            margin-bottom: 40px;
+        }
+
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 10px #e94560, 0 0 20px #e94560; }
+            50% { text-shadow: 0 0 20px #e94560, 0 0 40px #e94560, 0 0 60px #e94560; }
+        }
+
+        .loading-bar-container {
+            width: 400px;
+            height: 30px;
+            border: 4px solid #e94560;
+            background: #0a0a15;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .loading-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4ecca3, #e94560, #ffd700);
+            background-size: 200% 100%;
+            animation: gradient 2s linear infinite;
+            transition: width 0.3s;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+
+        .loading-text {
+            margin-top: 15px;
+            font-size: 10px;
+            color: #4ecca3;
+        }
+
+        .loading-tip {
+            position: absolute;
+            bottom: 50px;
+            font-size: 9px;
+            color: #666;
+            max-width: 500px;
+            text-align: center;
+            line-height: 1.8;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Scanlines effect */
+        #game-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.1),
+                rgba(0, 0, 0, 0.1) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-screen">
+        <div class="loading-title">LA VENGANZA DEL<br>PROFESOR ÁLVARO</div>
+        <div class="loading-subtitle">Un juego de conocimiento y supervivencia</div>
+        <div class="loading-bar-container">
+            <div class="loading-bar-fill" id="loading-fill"></div>
+        </div>
+        <p class="loading-text" id="loading-text">Iniciando sistemas...</p>
+        <p class="loading-tip">CONSEJO: El Profesor Álvaro odia que sus alumnos aprueben.<br>Demuéstrale que el conocimiento es poder.</p>
+    </div>
+
+    <div id="game-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+
+    <!-- Módulos del juego -->
+    <script src="data.js"></script>
+    <script src="sprites.js"></script>
+    <script src="audio.js"></script>
+    <script src="game.js"></script>
+    <script src="scenes.js"></script>
+
+    <!-- Inicialización -->
+    <script>
+        // Configuración de Phaser
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game-container',
+            backgroundColor: '#0a0a15',
+            pixelArt: true,
+            scene: [BootScene, IntroScene, MenuScene, LevelIntroScene, GameScene, LevelResultScene, FinalScene],
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH
+            },
+            audio: {
+                disableWebAudio: false
+            }
+        };
+
+        // Iniciar el juego
+        const game = new Phaser.Game(config);
+    </script>
+</body>
+</html>
