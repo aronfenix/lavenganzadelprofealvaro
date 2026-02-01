@@ -18,10 +18,11 @@ class GameScene extends Phaser.Scene {
         this.powerups = data.powerups || { fifty: 1, hint: 1, freeze: 1 };
         this.combo = 0;
         this.maxCombo = 0;
-        this.timeLeft = 20;
+        this.timeLeft = 25;
         this.timerPaused = false;
         this.canAnswer = true;
         this.questions = [];
+        this.currentInput = '';
     }
 
     create() {
@@ -43,6 +44,9 @@ class GameScene extends Phaser.Scene {
         // Área de pregunta y respuestas
         this.createQuestionArea();
 
+        // Crear teclado virtual (para tablets)
+        this.createVirtualKeyboard();
+
         // Mostrar primera pregunta
         this.showQuestion();
 
@@ -59,17 +63,31 @@ class GameScene extends Phaser.Scene {
     loadQuestions() {
         let pool;
         switch(this.level) {
-            case 1: pool = [...GAME_DATA.capitalesEuropa]; break;
-            case 2: pool = [...GAME_DATA.paisesPoblados]; break;
-            case 3: pool = [...GAME_DATA.ciudadesPobladas]; break;
-            case 4:
-                pool = [
-                    ...GAME_DATA.capitalesEuropa,
-                    ...GAME_DATA.paisesPoblados,
-                    ...GAME_DATA.ciudadesPobladas
-                ];
+            case 1:
+                // Capitales: generar opciones con otras capitales
+                pool = GAME_DATA.capitalesEuropa.map(q => ({
+                    ...q,
+                    opciones: GAME_DATA.generarOpcionesCapital(q.respuesta)
+                }));
                 break;
-            default: pool = [...GAME_DATA.capitalesEuropa];
+            case 2:
+                pool = [...GAME_DATA.paisesPoblados];
+                break;
+            case 3:
+                pool = [...GAME_DATA.ciudadesPobladas];
+                break;
+            case 4:
+                // Mix de todo
+                const caps = GAME_DATA.capitalesEuropa.slice(0, 10).map(q => ({
+                    ...q,
+                    opciones: GAME_DATA.generarOpcionesCapital(q.respuesta)
+                }));
+                const paises = GAME_DATA.paisesPoblados.slice(0, 10);
+                const ciudades = GAME_DATA.ciudadesPobladas.slice(0, 10);
+                pool = [...caps, ...paises, ...ciudades];
+                break;
+            default:
+                pool = [...GAME_DATA.capitalesEuropa];
         }
         this.questions = Phaser.Utils.Array.Shuffle(pool).slice(0, 10);
     }
@@ -209,7 +227,6 @@ class GameScene extends Phaser.Scene {
                 break;
         }
 
-        // Actualizar UI
         this.updatePowerupUI(type);
     }
 
@@ -227,12 +244,11 @@ class GameScene extends Phaser.Scene {
 
     use5050() {
         const q = this.questions[this.currentQuestion];
-        if (q.tipo === 'escribir' || !this.answersContainer) return;
+        if (!q.opciones || !this.answersContainer) return;
 
         const buttons = this.answersContainer.list.filter(c => c.isButton && !c.isDisabled);
         const wrongButtons = buttons.filter(b => b.answerText !== q.respuesta);
 
-        // Eliminar 2 opciones incorrectas
         Phaser.Utils.Array.Shuffle(wrongButtons).slice(0, 2).forEach(btn => {
             btn.setAlpha(0.3);
             btn.isDisabled = true;
@@ -243,12 +259,11 @@ class GameScene extends Phaser.Scene {
     useHint() {
         const q = this.questions[this.currentQuestion];
 
-        // Mostrar pista
         const hint = this.add.container(400, 300);
         const bg = this.add.rectangle(0, 0, 500, 100, 0x1a1a2e, 0.95);
         bg.setStrokeStyle(3, 0x4ecca3);
 
-        const text = this.add.text(0, 0, `PISTA: La respuesta empieza por "${q.respuesta.charAt(0)}"`, {
+        const text = this.add.text(0, 0, `PISTA: Empieza por "${q.respuesta.charAt(0).toUpperCase()}"`, {
             fontFamily: '"Press Start 2P"',
             fontSize: '10px',
             color: '#4ecca3',
@@ -271,7 +286,6 @@ class GameScene extends Phaser.Scene {
         this.timerPaused = true;
         this.timerBar.setFillStyle(0x00ffff);
 
-        // Efecto visual de congelación
         const freezeEffect = this.add.rectangle(400, 300, 800, 600, 0x00ffff, 0.1);
 
         this.time.delayedCall(5000, () => {
@@ -285,7 +299,6 @@ class GameScene extends Phaser.Scene {
         this.professor = this.add.sprite(100, 450, 'prof_idle_0');
         this.professor.setScale(2);
 
-        // Animación idle
         this.professorIdleAnim = this.time.addEvent({
             delay: 400,
             callback: () => {
@@ -355,109 +368,187 @@ class GameScene extends Phaser.Scene {
         // Caja de pregunta
         this.questionBox = this.add.graphics();
         this.questionBox.fillStyle(0x0a0a15, 0.9);
-        this.questionBox.fillRoundedRect(180, 100, 600, 80, 10);
+        this.questionBox.fillRoundedRect(180, 90, 600, 70, 10);
         this.questionBox.lineStyle(3, 0x4ecca3);
-        this.questionBox.strokeRoundedRect(180, 100, 600, 80, 10);
+        this.questionBox.strokeRoundedRect(180, 90, 600, 70, 10);
 
-        this.questionText = this.add.text(480, 140, '', {
+        this.questionText = this.add.text(480, 125, '', {
             fontFamily: '"Press Start 2P"',
-            fontSize: '12px',
+            fontSize: '11px',
             color: '#ffffff',
             align: 'center',
             wordWrap: { width: 560 }
         }).setOrigin(0.5);
 
         // Contenedor de respuestas
-        this.answersContainer = this.add.container(480, 320);
+        this.answersContainer = this.add.container(480, 260);
 
-        // Input de texto
-        this.textInputBg = this.add.graphics();
-        this.textInputBg.fillStyle(0x0a0a15, 1);
-        this.textInputBg.fillRoundedRect(230, 250, 500, 50, 5);
-        this.textInputBg.lineStyle(3, 0x4ecca3);
-        this.textInputBg.strokeRoundedRect(230, 250, 500, 50, 5);
-        this.textInputBg.setVisible(false);
+        // Input de texto visual
+        this.textInputContainer = this.add.container(480, 200);
+        this.textInputContainer.setVisible(false);
 
-        this.textInputDisplay = this.add.text(480, 275, '', {
+        const inputBg = this.add.graphics();
+        inputBg.fillStyle(0x0a0a15, 1);
+        inputBg.fillRoundedRect(-220, -25, 440, 50, 5);
+        inputBg.lineStyle(3, 0x4ecca3);
+        inputBg.strokeRoundedRect(-220, -25, 440, 50, 5);
+
+        this.textInputDisplay = this.add.text(0, 0, '_', {
             fontFamily: '"Press Start 2P"',
             fontSize: '14px',
             color: '#4ecca3'
         }).setOrigin(0.5);
-        this.textInputDisplay.setVisible(false);
 
-        this.submitBtn = this.createButton(480, 340, 'RESPONDER', () => {
-            if (this.canAnswer && this.currentInput.length > 0) {
-                this.checkTextAnswer();
-            }
-        });
-        this.submitBtn.setVisible(false);
+        this.textInputContainer.add([inputBg, this.textInputDisplay]);
 
-        this.currentInput = '';
-
-        // Keyboard
+        // Keyboard input (para PC)
         this.input.keyboard.on('keydown', (event) => {
-            if (!this.textInputBg.visible || !this.canAnswer) return;
+            if (!this.textInputContainer.visible || !this.canAnswer) return;
 
             if (event.key === 'Enter') {
                 if (this.currentInput.length > 0) this.checkTextAnswer();
             } else if (event.key === 'Backspace') {
                 this.currentInput = this.currentInput.slice(0, -1);
-                this.textInputDisplay.setText(this.currentInput + '_');
-            } else if (event.key.length === 1 && this.currentInput.length < 25) {
+                this.updateTextInputDisplay();
+            } else if (event.key.length === 1 && this.currentInput.length < 20) {
                 this.currentInput += event.key.toUpperCase();
-                this.textInputDisplay.setText(this.currentInput + '_');
+                this.updateTextInputDisplay();
             }
         });
     }
 
-    createButton(x, y, text, callback, width = 200) {
+    // ==================== TECLADO VIRTUAL ====================
+    createVirtualKeyboard() {
+        this.virtualKeyboard = this.add.container(400, 460);
+        this.virtualKeyboard.setVisible(false);
+
+        const rows = [
+            'QWERTYUIOP',
+            'ASDFGHJKL',
+            'ZXCVBNM'
+        ];
+
+        const keyWidth = 42;
+        const keyHeight = 38;
+        const padding = 4;
+
+        rows.forEach((row, rowIndex) => {
+            const rowWidth = row.length * (keyWidth + padding);
+            const startX = -rowWidth / 2 + keyWidth / 2;
+
+            for (let i = 0; i < row.length; i++) {
+                const key = row[i];
+                const x = startX + i * (keyWidth + padding);
+                const y = rowIndex * (keyHeight + padding);
+
+                this.createKey(x, y, key, keyWidth, keyHeight);
+            }
+        });
+
+        // Fila especial: Borrar y Enviar
+        const specialY = 3 * (keyHeight + padding);
+
+        // Botón borrar
+        this.createSpecialKey(-120, specialY, '⌫', 80, keyHeight, () => {
+            this.currentInput = this.currentInput.slice(0, -1);
+            this.updateTextInputDisplay();
+            audioManager.playClick();
+        });
+
+        // Espacio (por si necesitan para nombres compuestos)
+        this.createSpecialKey(0, specialY, 'ESPACIO', 100, keyHeight, () => {
+            if (this.currentInput.length < 20) {
+                this.currentInput += ' ';
+                this.updateTextInputDisplay();
+            }
+            audioManager.playClick();
+        });
+
+        // Botón enviar
+        this.createSpecialKey(120, specialY, 'OK', 80, keyHeight, () => {
+            if (this.currentInput.length > 0) {
+                this.checkTextAnswer();
+            }
+            audioManager.playClick();
+        }, 0x4ecca3);
+    }
+
+    createKey(x, y, letter, width, height) {
         const container = this.add.container(x, y);
 
-        const bg = this.add.graphics();
-        bg.fillStyle(0x16213e, 1);
-        bg.fillRoundedRect(-width/2, -20, width, 40, 5);
-        bg.lineStyle(2, 0xe94560);
-        bg.strokeRoundedRect(-width/2, -20, width, 40, 5);
+        const bg = this.add.rectangle(0, 0, width, height, 0x1a1a2e);
+        bg.setStrokeStyle(2, 0x4ecca3);
 
-        const label = this.add.text(0, 0, text, {
+        const text = this.add.text(0, 0, letter, {
             fontFamily: '"Press Start 2P"',
-            fontSize: '10px',
-            color: '#e94560'
+            fontSize: '12px',
+            color: '#4ecca3'
         }).setOrigin(0.5);
 
-        container.add([bg, label]);
-        container.setSize(width, 40);
+        container.add([bg, text]);
+        container.setSize(width, height);
         container.setInteractive();
-        container.isButton = true;
-        container.answerText = text;
-        container.bg = bg;
-        container.label = label;
 
-        container.on('pointerover', () => {
-            if (container.isDisabled) return;
-            audioManager.playHover();
-            bg.clear();
-            bg.fillStyle(0xe94560, 1);
-            bg.fillRoundedRect(-width/2, -20, width, 40, 5);
-            label.setColor('#0a0a15');
+        container.on('pointerdown', () => {
+            if (this.currentInput.length < 20) {
+                this.currentInput += letter;
+                this.updateTextInputDisplay();
+                audioManager.playClick();
+            }
+            bg.setFillStyle(0x4ecca3);
+            text.setColor('#0a0a15');
+        });
+
+        container.on('pointerup', () => {
+            bg.setFillStyle(0x1a1a2e);
+            text.setColor('#4ecca3');
         });
 
         container.on('pointerout', () => {
-            if (container.isDisabled) return;
-            bg.clear();
-            bg.fillStyle(0x16213e, 1);
-            bg.fillRoundedRect(-width/2, -20, width, 40, 5);
-            bg.lineStyle(2, 0xe94560);
-            bg.strokeRoundedRect(-width/2, -20, width, 40, 5);
-            label.setColor('#e94560');
+            bg.setFillStyle(0x1a1a2e);
+            text.setColor('#4ecca3');
         });
+
+        this.virtualKeyboard.add(container);
+    }
+
+    createSpecialKey(x, y, label, width, height, callback, color = 0xe94560) {
+        const container = this.add.container(x, y);
+
+        const bg = this.add.rectangle(0, 0, width, height, 0x1a1a2e);
+        bg.setStrokeStyle(2, color);
+
+        const text = this.add.text(0, 0, label, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '9px',
+            color: Phaser.Display.Color.IntegerToColor(color).rgba
+        }).setOrigin(0.5);
+
+        container.add([bg, text]);
+        container.setSize(width, height);
+        container.setInteractive();
 
         container.on('pointerdown', () => {
-            if (container.isDisabled) return;
             callback();
+            bg.setFillStyle(color);
+            text.setColor('#0a0a15');
         });
 
-        return container;
+        container.on('pointerup', () => {
+            bg.setFillStyle(0x1a1a2e);
+            text.setColor(Phaser.Display.Color.IntegerToColor(color).rgba);
+        });
+
+        container.on('pointerout', () => {
+            bg.setFillStyle(0x1a1a2e);
+            text.setColor(Phaser.Display.Color.IntegerToColor(color).rgba);
+        });
+
+        this.virtualKeyboard.add(container);
+    }
+
+    updateTextInputDisplay() {
+        this.textInputDisplay.setText(this.currentInput + '_');
     }
 
     showQuestion() {
@@ -469,21 +560,18 @@ class GameScene extends Phaser.Scene {
         // Limpiar
         this.answersContainer.removeAll(true);
         this.currentInput = '';
-        this.textInputDisplay.setText('_');
+        this.updateTextInputDisplay();
 
         // Reset timer
-        this.timeLeft = 20;
+        this.timeLeft = 25;
         this.timerPaused = false;
         this.updateTimerBar();
 
-        if (q.tipo === 'escribir') {
-            this.textInputBg.setVisible(true);
-            this.textInputDisplay.setVisible(true);
-            this.submitBtn.setVisible(true);
-        } else {
-            this.textInputBg.setVisible(false);
-            this.textInputDisplay.setVisible(false);
-            this.submitBtn.setVisible(false);
+        // Verificar si tiene opciones o es de escribir
+        if (q.opciones && q.opciones.length > 0) {
+            // Pregunta tipo test
+            this.textInputContainer.setVisible(false);
+            this.virtualKeyboard.setVisible(false);
 
             const options = Phaser.Utils.Array.Shuffle([...q.opciones]);
             const cols = options.length <= 2 ? 1 : 2;
@@ -492,21 +580,76 @@ class GameScene extends Phaser.Scene {
                 const col = i % cols;
                 const row = Math.floor(i / cols);
                 const x = cols === 1 ? 0 : -130 + col * 260;
-                const y = -60 + row * 70;
+                const y = -30 + row * 60;
 
-                const btn = this.createButton(x, y, opt, () => {
+                const btn = this.createAnswerButton(x, y, opt, () => {
                     if (this.canAnswer) this.checkAnswer(opt);
                 }, 240);
 
                 this.answersContainer.add(btn);
             });
+        } else {
+            // Pregunta de escribir - mostrar teclado virtual
+            this.textInputContainer.setVisible(true);
+            this.virtualKeyboard.setVisible(true);
         }
 
         this.canAnswer = true;
 
-        // Frase del profesor
         const frases = GAME_DATA.frases.inicio;
         this.speechText.setText(`"${frases[Math.floor(Math.random() * frases.length)]}"`);
+    }
+
+    createAnswerButton(x, y, text, callback, width = 200) {
+        const container = this.add.container(x, y);
+
+        const bg = this.add.graphics();
+        bg.fillStyle(0x16213e, 1);
+        bg.fillRoundedRect(-width/2, -22, width, 44, 5);
+        bg.lineStyle(2, 0xe94560);
+        bg.strokeRoundedRect(-width/2, -22, width, 44, 5);
+
+        const label = this.add.text(0, 0, text, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '9px',
+            color: '#e94560',
+            align: 'center',
+            wordWrap: { width: width - 20 }
+        }).setOrigin(0.5);
+
+        container.add([bg, label]);
+        container.setSize(width, 44);
+        container.setInteractive();
+        container.isButton = true;
+        container.answerText = text;
+        container.bg = bg;
+        container.label = label;
+
+        container.on('pointerover', () => {
+            if (container.isDisabled) return;
+            bg.clear();
+            bg.fillStyle(0xe94560, 1);
+            bg.fillRoundedRect(-width/2, -22, width, 44, 5);
+            label.setColor('#0a0a15');
+        });
+
+        container.on('pointerout', () => {
+            if (container.isDisabled) return;
+            bg.clear();
+            bg.fillStyle(0x16213e, 1);
+            bg.fillRoundedRect(-width/2, -22, width, 44, 5);
+            bg.lineStyle(2, 0xe94560);
+            bg.strokeRoundedRect(-width/2, -22, width, 44, 5);
+            label.setColor('#e94560');
+        });
+
+        container.on('pointerdown', () => {
+            if (container.isDisabled) return;
+            audioManager.playClick();
+            callback();
+        });
+
+        return container;
     }
 
     startTimer() {
@@ -532,10 +675,10 @@ class GameScene extends Phaser.Scene {
     }
 
     updateTimerBar() {
-        const width = (this.timeLeft / 20) * 752;
+        const width = (this.timeLeft / 25) * 752;
         this.timerBar.setSize(Math.max(0, width), 12);
 
-        if (this.timeLeft > 10) {
+        if (this.timeLeft > 12) {
             this.timerBar.setFillStyle(0x4ecca3);
         } else if (this.timeLeft > 5) {
             this.timerBar.setFillStyle(0xffd700);
@@ -572,17 +715,19 @@ class GameScene extends Phaser.Scene {
                        userAnswer.includes(correctAnswer) ||
                        correctAnswer.includes(userAnswer);
 
-        // Alternativas
+        // Alternativas comunes
         const alternatives = {
-            'estados unidos': ['usa', 'eeuu', 'us', 'united states'],
-            'reino unido': ['uk', 'united kingdom'],
+            'estados unidos': ['usa', 'eeuu', 'us', 'united states', 'ee uu', 'ee.uu'],
+            'reino unido': ['uk', 'united kingdom', 'gran bretana', 'inglaterra'],
             'paises bajos': ['holanda'],
+            'republica democratica del congo': ['rd congo', 'rdc', 'congo kinshasa'],
+            'rep dem congo': ['rd congo', 'rdc', 'congo kinshasa', 'republica democratica del congo'],
         };
 
         if (!isCorrect) {
             for (const [key, alts] of Object.entries(alternatives)) {
-                if (this.normalizeAnswer(key) === correctAnswer) {
-                    if (alts.some(a => this.normalizeAnswer(a) === userAnswer)) {
+                if (this.normalizeAnswer(key) === correctAnswer || correctAnswer.includes(this.normalizeAnswer(key))) {
+                    if (alts.some(a => this.normalizeAnswer(a) === userAnswer || userAnswer.includes(this.normalizeAnswer(a)))) {
                         isCorrect = true;
                         break;
                     }
@@ -604,17 +749,18 @@ class GameScene extends Phaser.Scene {
     processAnswer(isCorrect, correctAnswer, isTimeout = false) {
         this.canAnswer = false;
 
+        // Ocultar teclado
+        this.virtualKeyboard.setVisible(false);
+
         const q = this.questions[this.currentQuestion];
 
         if (isCorrect) {
-            // Correcto
             this.combo++;
             if (this.combo > this.maxCombo) this.maxCombo = this.combo;
 
             this.correctAnswers++;
             this.totalCorrect++;
 
-            // Calcular puntos con combo
             let points = 100 + (this.level * 50);
             if (this.combo >= 3) {
                 points *= (1 + (this.combo - 2) * 0.5);
@@ -635,7 +781,6 @@ class GameScene extends Phaser.Scene {
             this.setProfessorState('angry', 1500);
 
         } else {
-            // Incorrecto
             this.combo = 0;
             this.comboText.setText('');
             this.lives--;
@@ -657,14 +802,12 @@ class GameScene extends Phaser.Scene {
             this.setProfessorState('laugh', 2000);
             audioManager.playLaugh();
 
-            // Comprobar game over
             if (this.lives <= 0) {
                 this.time.delayedCall(2500, () => this.gameOver());
                 return;
             }
         }
 
-        // Siguiente pregunta
         this.time.delayedCall(2500, () => {
             this.currentQuestion++;
 
@@ -677,11 +820,11 @@ class GameScene extends Phaser.Scene {
     }
 
     showFeedback(correct, correctAnswer = '', dato = '') {
-        const feedback = this.add.container(480, 450);
+        const feedback = this.add.container(480, 400);
 
         const bg = this.add.graphics();
         bg.fillStyle(correct ? 0x4ecca3 : 0xe94560, 0.95);
-        bg.fillRoundedRect(-200, -50, 400, correct ? 60 : 100, 10);
+        bg.fillRoundedRect(-220, -50, 440, correct ? 60 : 100, 10);
 
         let text;
         if (correct) {
@@ -693,7 +836,7 @@ class GameScene extends Phaser.Scene {
         } else {
             text = this.add.text(0, -35, `INCORRECTO\nRespuesta: ${correctAnswer}`, {
                 fontFamily: '"Press Start 2P"',
-                fontSize: '10px',
+                fontSize: '9px',
                 color: '#ffffff',
                 align: 'center'
             }).setOrigin(0.5);
@@ -701,10 +844,10 @@ class GameScene extends Phaser.Scene {
             if (dato) {
                 const datoText = this.add.text(0, 20, dato, {
                     fontFamily: '"Press Start 2P"',
-                    fontSize: '7px',
+                    fontSize: '6px',
                     color: '#ffd700',
                     align: 'center',
-                    wordWrap: { width: 380 }
+                    wordWrap: { width: 400 }
                 }).setOrigin(0.5);
                 feedback.add(datoText);
             }
@@ -735,7 +878,7 @@ class GameScene extends Phaser.Scene {
         for (let i = 0; i < 15; i++) {
             const star = this.add.image(
                 480 + (Math.random() - 0.5) * 300,
-                400 + Math.random() * 100,
+                350 + Math.random() * 100,
                 'star'
             );
             star.setScale(0.5 + Math.random() * 0.5);
@@ -757,7 +900,7 @@ class GameScene extends Phaser.Scene {
         for (let i = 0; i < 8; i++) {
             const skull = this.add.image(
                 480 + (Math.random() - 0.5) * 200,
-                350,
+                300,
                 'skull'
             );
             skull.setScale(0.8);
@@ -842,7 +985,6 @@ class LevelResultScene extends Phaser.Scene {
     create() {
         this.add.rectangle(400, 300, 800, 600, 0x0a0a15);
 
-        // Profesor
         const profState = this.passed ? 'angry' : 'laugh';
         this.professor = this.add.sprite(400, 180, `prof_${profState}_0`);
         this.professor.setScale(3.5);
@@ -856,7 +998,6 @@ class LevelResultScene extends Phaser.Scene {
             loop: true
         });
 
-        // Título
         const title = this.passed ? '¡NIVEL SUPERADO!' : 'NIVEL FALLIDO';
         const titleColor = this.passed ? '#4ecca3' : '#e94560';
 
@@ -866,7 +1007,6 @@ class LevelResultScene extends Phaser.Scene {
             color: titleColor
         }).setOrigin(0.5);
 
-        // Estadísticas
         this.add.text(400, 380,
             `Aciertos: ${this.correct}/10\n` +
             `Combo máximo: x${this.maxCombo}\n` +
@@ -878,7 +1018,6 @@ class LevelResultScene extends Phaser.Scene {
             lineSpacing: 10
         }).setOrigin(0.5);
 
-        // Frase
         const phraseType = this.passed ? 'nivelSuperado' : 'nivelFallido';
         const phrase = GAME_DATA.frases[phraseType][Math.floor(Math.random() * GAME_DATA.frases[phraseType].length)];
 
@@ -890,7 +1029,6 @@ class LevelResultScene extends Phaser.Scene {
             wordWrap: { width: 600 }
         }).setOrigin(0.5);
 
-        // Sonido
         if (this.passed) {
             audioManager.playLevelVictory();
             this.createConfetti();
@@ -898,12 +1036,11 @@ class LevelResultScene extends Phaser.Scene {
             audioManager.playLevelDefeat();
         }
 
-        // Botón
         const btnText = this.passed ?
             (this.level >= 4 ? 'VER RESULTADO' : 'SIGUIENTE NIVEL') :
             'VER RESULTADO';
 
-        const btn = this.createButton(400, 540, btnText, () => {
+        this.createButton(400, 540, btnText, () => {
             audioManager.playClick();
             this.nextScene();
         });
@@ -1009,16 +1146,14 @@ class FinalScene extends Phaser.Scene {
         const bgColor = this.victory ? 0x1a2a1a : 0x2a1a1a;
         this.add.rectangle(400, 300, 800, 600, bgColor);
 
-        // Profesor grande
         const profState = this.victory ? 'defeat' : 'victory';
-        this.professor = this.add.sprite(400, 180, `prof_${this.victory ? 'angry' : 'laugh'}_0`);
-        this.professor.setScale(4);
+        this.professor = this.add.sprite(400, 150, `prof_${this.victory ? 'angry' : 'laugh'}_0`);
+        this.professor.setScale(3.5);
 
         this.time.addEvent({
             delay: this.victory ? 100 : 200,
             callback: () => {
                 if (this.victory) {
-                    // Temblando de rabia
                     this.professor.x = 400 + (Math.random() - 0.5) * 10;
                 } else {
                     const frame = this.professor.texture.key.endsWith('0') ? 1 : 0;
@@ -1028,29 +1163,26 @@ class FinalScene extends Phaser.Scene {
             loop: true
         });
 
-        // Título
         const title = this.victory ? '¡VICTORIA!' : 'GAME OVER';
         const titleColor = this.victory ? '#4ecca3' : '#e94560';
 
-        this.add.text(400, 320, title, {
+        this.add.text(400, 280, title, {
             fontFamily: '"Press Start 2P"',
-            fontSize: '32px',
+            fontSize: '28px',
             color: titleColor
         }).setOrigin(0.5);
 
-        // Subtítulo
         const subtitle = this.victory ?
             '¡Has derrotado al Profesor Álvaro!' :
             (this.reason === 'lives' ? 'Te has quedado sin vidas...' : 'No has superado el nivel...');
 
-        this.add.text(400, 370, subtitle, {
+        this.add.text(400, 320, subtitle, {
             fontFamily: '"Press Start 2P"',
-            fontSize: '10px',
+            fontSize: '9px',
             color: '#ffffff'
         }).setOrigin(0.5);
 
-        // Estadísticas
-        this.add.text(400, 420,
+        this.add.text(400, 370,
             `Nivel alcanzado: ${this.level}/4\n` +
             `Aciertos totales: ${this.totalCorrect}\n` +
             `Puntuación final: ${this.score}`, {
@@ -1061,11 +1193,10 @@ class FinalScene extends Phaser.Scene {
             lineSpacing: 8
         }).setOrigin(0.5);
 
-        // Frase final
         const phraseType = this.victory ? 'victoriaFinal' : 'derrotaFinal';
         const phrase = GAME_DATA.frases[phraseType][Math.floor(Math.random() * GAME_DATA.frases[phraseType].length)];
 
-        this.add.text(400, 500, `"${phrase}"`, {
+        this.add.text(400, 440, `"${phrase}"`, {
             fontFamily: '"Press Start 2P"',
             fontSize: '8px',
             color: this.victory ? '#4ecca3' : '#e94560',
@@ -1073,18 +1204,30 @@ class FinalScene extends Phaser.Scene {
             wordWrap: { width: 600 }
         }).setOrigin(0.5);
 
+        // Guardar puntuación
+        this.saveScore();
+
         // Botones
-        this.createButton(300, 560, 'MENÚ', () => {
+        this.createButton(200, 500, 'MENÚ', () => {
             audioManager.playClick();
             this.scene.start('MenuScene');
         });
 
-        this.createButton(500, 560, 'REINTENTAR', () => {
+        this.createButton(400, 500, 'RANKING', () => {
+            audioManager.playClick();
+            this.scene.start('LeaderboardScene');
+        });
+
+        this.createButton(600, 500, 'REINTENTAR', () => {
             audioManager.playClick();
             this.scene.start('LevelIntroScene', { level: 1 });
         });
 
-        // Efectos
+        // Input para nombre si es puntuación alta
+        if (this.score > 0) {
+            this.showNameInput();
+        }
+
         if (this.victory) {
             audioManager.playVictory();
             this.createMassiveConfetti();
@@ -1095,38 +1238,125 @@ class FinalScene extends Phaser.Scene {
         this.cameras.main.fadeIn(500);
     }
 
+    showNameInput() {
+        this.add.text(400, 545, 'Introduce tu nombre para el ranking:', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '7px',
+            color: '#666666'
+        }).setOrigin(0.5);
+
+        // Input visual
+        this.nameInput = '';
+        this.nameContainer = this.add.container(400, 575);
+
+        const inputBg = this.add.graphics();
+        inputBg.fillStyle(0x1a1a2e, 1);
+        inputBg.fillRoundedRect(-100, -15, 140, 30, 5);
+        inputBg.lineStyle(2, 0x4ecca3);
+        inputBg.strokeRoundedRect(-100, -15, 140, 30, 5);
+
+        this.nameDisplay = this.add.text(-90, 0, '_', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '10px',
+            color: '#4ecca3'
+        }).setOrigin(0, 0.5);
+
+        // Botón guardar
+        const saveBtn = this.add.container(80, 0);
+        const saveBg = this.add.rectangle(0, 0, 60, 28, 0x4ecca3);
+        const saveText = this.add.text(0, 0, 'OK', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '10px',
+            color: '#0a0a15'
+        }).setOrigin(0.5);
+
+        saveBtn.add([saveBg, saveText]);
+        saveBtn.setSize(60, 28);
+        saveBtn.setInteractive();
+        saveBtn.on('pointerdown', () => this.saveName());
+
+        this.nameContainer.add([inputBg, this.nameDisplay, saveBtn]);
+
+        // Keyboard input
+        this.input.keyboard.on('keydown', (event) => {
+            if (event.key === 'Enter') {
+                this.saveName();
+            } else if (event.key === 'Backspace') {
+                this.nameInput = this.nameInput.slice(0, -1);
+                this.nameDisplay.setText(this.nameInput + '_');
+            } else if (event.key.length === 1 && this.nameInput.length < 10) {
+                this.nameInput += event.key.toUpperCase();
+                this.nameDisplay.setText(this.nameInput + '_');
+            }
+        });
+    }
+
+    saveName() {
+        if (this.nameInput.length === 0) this.nameInput = 'ANÓNIMO';
+
+        const scores = JSON.parse(localStorage.getItem('profesorAlvaroLeaderboard') || '[]');
+
+        scores.push({
+            name: this.nameInput,
+            score: this.score,
+            level: this.level,
+            correct: this.totalCorrect,
+            date: new Date().toISOString(),
+            victory: this.victory
+        });
+
+        scores.sort((a, b) => b.score - a.score);
+        localStorage.setItem('profesorAlvaroLeaderboard', JSON.stringify(scores.slice(0, 50)));
+
+        // Feedback visual
+        if (this.nameContainer) {
+            this.nameContainer.destroy();
+            this.add.text(400, 575, '¡Puntuación guardada!', {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '8px',
+                color: '#4ecca3'
+            }).setOrigin(0.5);
+        }
+    }
+
+    saveScore() {
+        // Auto-save sin nombre por si no lo introducen
+        const scores = JSON.parse(localStorage.getItem('profesorAlvaroLeaderboard') || '[]');
+        // No guardamos aquí, solo al introducir nombre
+    }
+
     createButton(x, y, text, callback) {
         const container = this.add.container(x, y);
 
         const bg = this.add.graphics();
         bg.fillStyle(0x16213e, 1);
-        bg.fillRoundedRect(-80, -18, 160, 36, 5);
+        bg.fillRoundedRect(-70, -18, 140, 36, 5);
         bg.lineStyle(2, 0xe94560);
-        bg.strokeRoundedRect(-80, -18, 160, 36, 5);
+        bg.strokeRoundedRect(-70, -18, 140, 36, 5);
 
         const label = this.add.text(0, 0, text, {
             fontFamily: '"Press Start 2P"',
-            fontSize: '10px',
+            fontSize: '9px',
             color: '#e94560'
         }).setOrigin(0.5);
 
         container.add([bg, label]);
-        container.setSize(160, 36);
+        container.setSize(140, 36);
         container.setInteractive();
 
         container.on('pointerover', () => {
             bg.clear();
             bg.fillStyle(0xe94560, 1);
-            bg.fillRoundedRect(-80, -18, 160, 36, 5);
+            bg.fillRoundedRect(-70, -18, 140, 36, 5);
             label.setColor('#0a0a15');
         });
 
         container.on('pointerout', () => {
             bg.clear();
             bg.fillStyle(0x16213e, 1);
-            bg.fillRoundedRect(-80, -18, 160, 36, 5);
+            bg.fillRoundedRect(-70, -18, 140, 36, 5);
             bg.lineStyle(2, 0xe94560);
-            bg.strokeRoundedRect(-80, -18, 160, 36, 5);
+            bg.strokeRoundedRect(-70, -18, 140, 36, 5);
             label.setColor('#e94560');
         });
 
@@ -1151,5 +1381,135 @@ class FinalScene extends Phaser.Scene {
                 });
             });
         }
+    }
+}
+
+// ==================== ESCENA LEADERBOARD ====================
+class LeaderboardScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'LeaderboardScene' });
+    }
+
+    create() {
+        this.add.rectangle(400, 300, 800, 600, 0x0a0a15);
+
+        // Título
+        this.add.text(400, 40, '🏆 RANKING 🏆', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '24px',
+            color: '#ffd700'
+        }).setOrigin(0.5);
+
+        // Cargar puntuaciones
+        const scores = JSON.parse(localStorage.getItem('profesorAlvaroLeaderboard') || '[]');
+
+        if (scores.length === 0) {
+            this.add.text(400, 300, 'No hay puntuaciones todavía.\n¡Sé el primero en jugar!', {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '10px',
+                color: '#666666',
+                align: 'center'
+            }).setOrigin(0.5);
+        } else {
+            // Cabecera
+            this.add.text(60, 90, '#', { fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#4ecca3' });
+            this.add.text(100, 90, 'NOMBRE', { fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#4ecca3' });
+            this.add.text(350, 90, 'PUNTOS', { fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#4ecca3' });
+            this.add.text(500, 90, 'NIVEL', { fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#4ecca3' });
+            this.add.text(620, 90, 'ACIERTOS', { fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#4ecca3' });
+
+            // Línea separadora
+            this.add.rectangle(400, 110, 720, 2, 0x4ecca3);
+
+            // Mostrar top 15
+            const displayScores = scores.slice(0, 15);
+            displayScores.forEach((entry, index) => {
+                const y = 130 + index * 28;
+
+                // Medallas para top 3
+                let rankText = `${index + 1}`;
+                let rankColor = '#ffffff';
+                if (index === 0) { rankText = '🥇'; rankColor = '#ffd700'; }
+                else if (index === 1) { rankText = '🥈'; rankColor = '#c0c0c0'; }
+                else if (index === 2) { rankText = '🥉'; rankColor = '#cd7f32'; }
+
+                this.add.text(60, y, rankText, {
+                    fontFamily: '"Press Start 2P"',
+                    fontSize: '10px',
+                    color: rankColor
+                });
+
+                this.add.text(100, y, entry.name.substring(0, 10), {
+                    fontFamily: '"Press Start 2P"',
+                    fontSize: '10px',
+                    color: entry.victory ? '#4ecca3' : '#ffffff'
+                });
+
+                this.add.text(350, y, `${entry.score}`, {
+                    fontFamily: '"Press Start 2P"',
+                    fontSize: '10px',
+                    color: '#ffd700'
+                });
+
+                this.add.text(500, y, `${entry.level}/4`, {
+                    fontFamily: '"Press Start 2P"',
+                    fontSize: '10px',
+                    color: '#ffffff'
+                });
+
+                this.add.text(620, y, `${entry.correct}`, {
+                    fontFamily: '"Press Start 2P"',
+                    fontSize: '10px',
+                    color: '#ffffff'
+                });
+            });
+        }
+
+        // Botón volver
+        this.createButton(400, 560, 'VOLVER AL MENÚ', () => {
+            audioManager.playClick();
+            this.scene.start('MenuScene');
+        });
+
+        this.cameras.main.fadeIn(500);
+    }
+
+    createButton(x, y, text, callback) {
+        const container = this.add.container(x, y);
+
+        const bg = this.add.graphics();
+        bg.fillStyle(0x16213e, 1);
+        bg.fillRoundedRect(-120, -20, 240, 40, 5);
+        bg.lineStyle(3, 0xe94560);
+        bg.strokeRoundedRect(-120, -20, 240, 40, 5);
+
+        const label = this.add.text(0, 0, text, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '10px',
+            color: '#e94560'
+        }).setOrigin(0.5);
+
+        container.add([bg, label]);
+        container.setSize(240, 40);
+        container.setInteractive();
+
+        container.on('pointerover', () => {
+            bg.clear();
+            bg.fillStyle(0xe94560, 1);
+            bg.fillRoundedRect(-120, -20, 240, 40, 5);
+            label.setColor('#0a0a15');
+        });
+
+        container.on('pointerout', () => {
+            bg.clear();
+            bg.fillStyle(0x16213e, 1);
+            bg.fillRoundedRect(-120, -20, 240, 40, 5);
+            bg.lineStyle(3, 0xe94560);
+            bg.strokeRoundedRect(-120, -20, 240, 40, 5);
+            label.setColor('#e94560');
+        });
+
+        container.on('pointerdown', callback);
+        return container;
     }
 }
