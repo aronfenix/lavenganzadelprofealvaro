@@ -791,6 +791,13 @@ class GameScene extends Phaser.Scene {
             this.correctAnswers++;
             this.totalCorrect++;
 
+            // Actualizar estadísticas de logros
+            const statsUpdate = { totalCorrect: 1 };
+            if (this.level === 1) statsUpdate.europeCorrect = 1;
+            else statsUpdate.populationCorrect = 1;
+            if (this.combo > 0) statsUpdate.maxCombo = this.combo;
+            achievementSystem.updateStats(statsUpdate);
+
             let points = 100 + (this.level * 50);
             if (this.combo >= 3) {
                 points *= (1 + (this.combo - 2) * 0.5);
@@ -814,6 +821,9 @@ class GameScene extends Phaser.Scene {
             this.combo = 0;
             this.comboText.setText('');
             this.lives--;
+
+            // Registrar respuesta incorrecta
+            achievementSystem.updateStats({ totalWrong: 1 });
 
             this.updateLivesDisplay();
 
@@ -1314,12 +1324,26 @@ class FinalScene extends Phaser.Scene {
             wordWrap: { width: 550 }
         }).setOrigin(0.5);
 
+        // Registrar derrota en estadísticas
+        achievementSystem.updateStats({
+            losses: 1,
+            levelsCompleted: this.level - 1,
+            highScore: this.score
+        });
+
         this.showCommonUI();
         audioManager.playDefeat();
         this.cameras.main.fadeIn(500);
     }
 
     showVictoryScene() {
+        // Registrar victoria en estadísticas
+        achievementSystem.updateStats({
+            victories: 1,
+            levelsCompleted: 4,
+            highScore: this.score
+        });
+
         // Profesor DERROTADO - cabizbajo
         this.professor = this.add.sprite(400, 100, 'prof_defeat_0');
         this.professor.setScale(2.5);
