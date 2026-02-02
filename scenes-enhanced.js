@@ -10,151 +10,220 @@ class CinematicIntroScene extends Phaser.Scene {
 
     create() {
         this.effects = new EffectsManager(this);
-        this.cinematic = new CinematicManager(this);
 
         // Fondo negro inicial
-        this.bg = this.add.rectangle(400, 300, 800, 600, 0x000000);
+        this.bg = this.add.rectangle(400, 300, 800, 600, 0x0a0a15);
 
-        // Iniciar secuencia cinematica
-        this.runCinematic();
+        // Variables de estado
+        this.step = 0;
+
+        // Skip button
+        this.add.text(700, 20, 'ENTER: Saltar', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '8px',
+            color: '#444444'
+        });
+
+        this.input.keyboard.on('keydown-ENTER', () => {
+            this.scene.start('EnhancedMenuScene');
+        });
+
+        // Iniciar intro simplificada
+        this.startIntro();
     }
 
-    async runCinematic() {
-        await this.delay(500);
-
-        // Texto inicial con efecto
-        const yearText = this.effects.createAnimatedText(400, 300, '2024', {
+    startIntro() {
+        // Paso 1: Mostrar año
+        const yearText = this.add.text(400, 300, '2024', {
             fontFamily: '"Press Start 2P"',
             fontSize: '48px',
             color: '#4ecca3'
-        }, 'typewriter');
-
-        await this.delay(2000);
+        }).setOrigin(0.5).setAlpha(0);
 
         this.tweens.add({
             targets: yearText,
-            alpha: 0,
-            duration: 500
+            alpha: 1,
+            duration: 1000,
+            onComplete: () => {
+                this.time.delayedCall(1500, () => {
+                    this.tweens.add({
+                        targets: yearText,
+                        alpha: 0,
+                        duration: 500,
+                        onComplete: () => {
+                            yearText.destroy();
+                            this.showNarration();
+                        }
+                    });
+                });
+            }
         });
+    }
 
-        await this.delay(600);
-
-        // Primera escena: La escuela
-        await this.cinematic.fadeFromBlack(500);
-        this.cinematic.enter();
-
-        this.schoolBg = this.add.rectangle(400, 300, 800, 600, 0x1a2a1a);
-        const schoolText = this.add.text(400, 150, 'INSTITUTO DE ENSENANZA', {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '16px',
-            color: '#4ecca3'
-        }).setOrigin(0.5);
-
-        await this.cinematic.showDialogue('NARRADOR',
-            'En un instituto aparentemente normal, algo oscuro se gestaba en el departamento de Geografia...',
-            { duration: 5000, speakerColor: '#4ecca3' }
-        );
-
-        // Efecto de glitch
-        this.effects.glitch(300);
-        await this.delay(500);
-
-        // Transicion al despacho
-        await this.cinematic.fadeToBlack(500);
-        schoolText.destroy();
-        this.schoolBg.setFillStyle(0x1a1a2e);
-
-        await this.cinematic.fadeFromBlack(500);
-
-        // Profesor aparece
-        this.professor = this.add.sprite(400, 280, 'prof_idle_0');
-        this.professor.setScale(4);
-        this.professor.setAlpha(0);
-
-        this.effects.dramaticEntrance(this.professor, 'zoom', 1000);
-        await this.delay(1200);
-
-        // Animacion del profesor hablando
-        this.profAnim = this.time.addEvent({
-            delay: 150,
-            callback: () => {
-                const frame = this.professor.texture.key.endsWith('0') ? 1 : 0;
-                this.professor.setTexture(`prof_talk_${frame}`);
-            },
-            loop: true
-        });
-
-        await this.cinematic.showDialogue('PROFESOR ALVARO',
-            'Llevo ANOS soportando la ignorancia de mis alumnos...',
-            { duration: 4000, speakerColor: '#e94560' }
-        );
-
-        // Efecto de enfado
-        this.effects.shake(0.01, 300);
-        this.professor.setTexture('prof_angry_0');
-
-        await this.cinematic.showDialogue('PROFESOR ALVARO',
-            'Nadie estudia! Nadie se esfuerza! Pues ahora... PAGARAN!',
-            { duration: 4000, speakerColor: '#e94560' }
-        );
-
-        // Risa malvada con efectos
-        this.profAnim.destroy();
-        this.profAnim = this.time.addEvent({
-            delay: 100,
-            callback: () => {
-                const frame = this.professor.texture.key.endsWith('0') ? 1 : 0;
-                this.professor.setTexture(`prof_laugh_${frame}`);
-                this.professor.y = 280 + (frame === 0 ? -3 : 3);
-            },
-            loop: true
-        });
-
-        audioManager.playLaugh && audioManager.playLaugh();
-        this.effects.flash(0xe94560, 200);
-
-        await this.cinematic.showDialogue('PROFESOR ALVARO',
-            'MUAJAJAJA! He creado el EXAMEN DEFINITIVO!',
-            { duration: 3000, speakerColor: '#e94560' }
-        );
-
-        // Lightning effect
-        this.effects.lightning(200, 0, 400, 300);
-        await this.delay(300);
-        this.effects.lightning(600, 0, 400, 300);
-        await this.delay(500);
-
-        await this.cinematic.showDialogue('PROFESOR ALVARO',
-            'Un examen del que NADIE puede escapar! El conocimiento sera su prision!',
-            { duration: 4000, speakerColor: '#e94560' }
-        );
-
-        // Transicion dramatica
-        this.profAnim.destroy();
-        await this.cinematic.fadeToBlack(800);
-
-        // Texto final
-        const heroText = this.add.text(400, 250, 'Pero un valiente estudiante\ndecidia enfrentarlo...', {
+    showNarration() {
+        // Texto de narración
+        const narrationText = this.add.text(400, 250, 'En un instituto aparentemente normal...', {
             fontFamily: '"Press Start 2P"',
             fontSize: '14px',
             color: '#4ecca3',
             align: 'center'
         }).setOrigin(0.5).setAlpha(0);
 
-        await this.cinematic.fadeFromBlack(500);
         this.tweens.add({
-            targets: heroText,
+            targets: narrationText,
             alpha: 1,
-            duration: 1000
+            duration: 800
         });
 
-        await this.delay(3000);
+        this.time.delayedCall(2500, () => {
+            narrationText.setText('Algo oscuro se gestaba...');
 
-        // Titulo del juego con efectos
-        await this.cinematic.fadeToBlack(500);
-        heroText.destroy();
+            this.time.delayedCall(2000, () => {
+                this.tweens.add({
+                    targets: narrationText,
+                    alpha: 0,
+                    duration: 500,
+                    onComplete: () => {
+                        narrationText.destroy();
+                        this.showProfessor();
+                    }
+                });
+            });
+        });
+    }
 
-        this.showTitle();
+    showProfessor() {
+        // Profesor aparece
+        this.professor = this.add.sprite(400, 280, 'prof_idle_0');
+        this.professor.setScale(4);
+        this.professor.setAlpha(0);
+
+        this.tweens.add({
+            targets: this.professor,
+            alpha: 1,
+            scale: 4.5,
+            duration: 1000,
+            ease: 'Back.easeOut'
+        });
+
+        // Animación
+        this.profAnim = this.time.addEvent({
+            delay: 150,
+            callback: () => {
+                if (this.professor && this.professor.texture) {
+                    const frame = this.professor.texture.key.endsWith('0') ? 1 : 0;
+                    this.professor.setTexture(`prof_talk_${frame}`);
+                }
+            },
+            loop: true
+        });
+
+        // Dialogo
+        this.dialogueBox = this.add.container(400, 500);
+
+        const boxBg = this.add.graphics();
+        boxBg.fillStyle(0x1a1a2e, 0.95);
+        boxBg.fillRoundedRect(-350, -40, 700, 80, 10);
+        boxBg.lineStyle(3, 0xe94560);
+        boxBg.strokeRoundedRect(-350, -40, 700, 80, 10);
+
+        const speakerText = this.add.text(-330, -25, 'PROFESOR ALVARO', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '10px',
+            color: '#e94560'
+        });
+
+        this.dialogueText = this.add.text(0, 10, '', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '11px',
+            color: '#ffffff',
+            align: 'center',
+            wordWrap: { width: 650 }
+        }).setOrigin(0.5);
+
+        this.dialogueBox.add([boxBg, speakerText, this.dialogueText]);
+        this.dialogueBox.setAlpha(0);
+
+        this.tweens.add({
+            targets: this.dialogueBox,
+            alpha: 1,
+            duration: 500
+        });
+
+        // Secuencia de dialogos
+        this.showDialogues();
+    }
+
+    showDialogues() {
+        const dialogues = [
+            'Llevo ANOS soportando la ignorancia de mis alumnos...',
+            'Nadie estudia! Nadie se esfuerza!',
+            'MUAJAJAJA! He creado el EXAMEN DEFINITIVO!',
+            'Un examen del que NADIE puede escapar!'
+        ];
+
+        let index = 0;
+
+        const showNext = () => {
+            if (index >= dialogues.length) {
+                this.finishIntro();
+                return;
+            }
+
+            // Typewriter effect
+            const text = dialogues[index];
+            let charIndex = 0;
+            this.dialogueText.setText('');
+
+            const typeTimer = this.time.addEvent({
+                delay: 40,
+                callback: () => {
+                    if (charIndex < text.length) {
+                        this.dialogueText.setText(text.substring(0, charIndex + 1));
+                        charIndex++;
+                    } else {
+                        typeTimer.destroy();
+                    }
+                },
+                loop: true
+            });
+
+            // Efectos según diálogo
+            if (index === 2) {
+                // Risa malvada
+                this.time.delayedCall(500, () => {
+                    if (this.profAnim) this.profAnim.destroy();
+                    this.profAnim = this.time.addEvent({
+                        delay: 100,
+                        callback: () => {
+                            if (this.professor && this.professor.texture) {
+                                const frame = this.professor.texture.key.endsWith('0') ? 1 : 0;
+                                this.professor.setTexture(`prof_laugh_${frame}`);
+                            }
+                        },
+                        loop: true
+                    });
+                    this.effects.shake(0.01, 300);
+                });
+            }
+
+            index++;
+            this.time.delayedCall(3000, showNext);
+        };
+
+        showNext();
+    }
+
+    finishIntro() {
+        // Limpiar
+        if (this.profAnim) this.profAnim.destroy();
+
+        // Fade out
+        this.cameras.main.fadeOut(800, 0, 0, 0);
+
+        this.time.delayedCall(800, () => {
+            this.showTitle();
+        });
     }
 
     showTitle() {
@@ -346,9 +415,6 @@ class EnhancedMenuScene extends Phaser.Scene {
 
         // Estadisticas rapidas
         this.createStatsDisplay();
-
-        // Vignette
-        this.effects.createVignette(0.3);
 
         // Musica
         this.input.once('pointerdown', () => {

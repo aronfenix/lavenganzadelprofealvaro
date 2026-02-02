@@ -44,21 +44,40 @@ class EffectsManager {
 
     // ==================== DRAMATIC VIGNETTE ====================
     createVignette(intensity = 0.3) {
-        const vignette = this.scene.add.graphics();
-        const width = 800;
-        const height = 600;
+        // Create edge-based vignette using rectangles on the borders
+        const container = this.scene.add.container(0, 0);
 
-        // Create radial gradient vignette
-        for (let i = 0; i < 50; i++) {
-            const alpha = (i / 50) * intensity;
-            const size = 1 - (i / 50) * 0.5;
-            vignette.fillStyle(0x000000, alpha);
-            vignette.fillEllipse(width/2, height/2, width * size, height * size);
+        // Top edge gradient
+        for (let i = 0; i < 10; i++) {
+            const rect = this.scene.add.rectangle(400, i * 8, 800, 16, 0x000000);
+            rect.setAlpha(intensity * (1 - i / 10));
+            container.add(rect);
         }
 
-        vignette.setDepth(1000);
-        vignette.setScrollFactor(0);
-        return vignette;
+        // Bottom edge gradient
+        for (let i = 0; i < 10; i++) {
+            const rect = this.scene.add.rectangle(400, 600 - i * 8, 800, 16, 0x000000);
+            rect.setAlpha(intensity * (1 - i / 10));
+            container.add(rect);
+        }
+
+        // Left edge gradient
+        for (let i = 0; i < 8; i++) {
+            const rect = this.scene.add.rectangle(i * 10, 300, 20, 600, 0x000000);
+            rect.setAlpha(intensity * (1 - i / 8) * 0.7);
+            container.add(rect);
+        }
+
+        // Right edge gradient
+        for (let i = 0; i < 8; i++) {
+            const rect = this.scene.add.rectangle(800 - i * 10, 300, 20, 600, 0x000000);
+            rect.setAlpha(intensity * (1 - i / 8) * 0.7);
+            container.add(rect);
+        }
+
+        container.setDepth(1000);
+        container.setScrollFactor(0);
+        return container;
     }
 
     // ==================== GLITCH EFFECT ====================
