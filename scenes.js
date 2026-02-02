@@ -1261,95 +1261,148 @@ class FinalScene extends Phaser.Scene {
         const bgColor = this.victory ? 0x1a2a1a : 0x2a1a1a;
         this.add.rectangle(400, 300, 800, 600, bgColor);
 
-        // Profesor más pequeño y arriba
-        this.professor = this.add.sprite(400, 80, `prof_${this.victory ? 'angry' : 'laugh'}_0`);
+        if (this.victory) {
+            // VICTORIA: Profesor derrotado que se va
+            this.showVictoryScene();
+        } else {
+            // DERROTA: Profesor riendo
+            this.showDefeatScene();
+        }
+    }
+
+    showDefeatScene() {
+        // Profesor riéndose
+        this.professor = this.add.sprite(400, 80, 'prof_laugh_0');
         this.professor.setScale(2.5);
 
         this.time.addEvent({
-            delay: this.victory ? 100 : 200,
+            delay: 200,
             callback: () => {
-                if (this.victory) {
-                    this.professor.x = 400 + (Math.random() - 0.5) * 10;
-                } else {
-                    const frame = this.professor.texture.key.endsWith('0') ? 1 : 0;
-                    this.professor.setTexture(`prof_laugh_${frame}`);
-                }
+                const frame = this.professor.texture.key.endsWith('0') ? 1 : 0;
+                this.professor.setTexture(`prof_laugh_${frame}`);
             },
             loop: true
         });
 
-        const title = this.victory ? '¡VICTORIA!' : 'GAME OVER';
-        const titleColor = this.victory ? '#4ecca3' : '#e94560';
-
-        this.add.text(400, 170, title, {
+        this.add.text(400, 170, 'GAME OVER', {
             fontFamily: '"Press Start 2P"',
             fontSize: '24px',
-            color: titleColor
+            color: '#e94560'
         }).setOrigin(0.5);
 
-        const subtitle = this.victory ?
-            '¡Has derrotado al Profesor Álvaro!' :
-            (this.reason === 'lives' ? 'Te has quedado sin vidas...' : 'No has superado el nivel...');
-
+        const subtitle = this.reason === 'lives' ? 'Te has quedado sin vidas...' : 'No has superado el nivel...';
         this.add.text(400, 200, subtitle, {
             fontFamily: '"Press Start 2P"',
             fontSize: '8px',
             color: '#ffffff'
         }).setOrigin(0.5);
 
-        // Epílogo narrativo según victoria o derrota
-        if (this.victory) {
-            const epilogos = [
-                'El Profesor Álvaro, derrotado y humillado,\ndecide retirarse al campo a criar gallinas.\n"Ya no me queda nada que enseñar..."',
-                'Ante la evidencia de tu conocimiento,\nel Profesor Álvaro abandona la enseñanza.\nAhora cultiva tomates en un pueblo de Segovia.',
-                'El temido Profesor Álvaro se retira.\nSe le vio por última vez comprando una furgoneta\npara irse a vivir a las montañas.',
-                'Victoria total. El Profesor Álvaro\nha vendido su bata de laboratorio\ny ahora hace quesos artesanales en Asturias.'
-            ];
-            const epilogo = epilogos[Math.floor(Math.random() * epilogos.length)];
+        this.add.text(400, 240,
+            `Nivel: ${this.level}/4  |  Aciertos: ${this.totalCorrect}  |  Puntos: ${this.score}`, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '9px',
+            color: '#ffd700',
+            align: 'center'
+        }).setOrigin(0.5);
 
-            this.add.text(400, 248, epilogo, {
-                fontFamily: '"Press Start 2P"',
-                fontSize: '6px',
-                color: '#88ccaa',
-                align: 'center',
-                lineSpacing: 6
-            }).setOrigin(0.5);
-        } else {
-            this.add.text(400, 240,
-                `Nivel: ${this.level}/4  |  Aciertos: ${this.totalCorrect}  |  Puntos: ${this.score}`, {
-                fontFamily: '"Press Start 2P"',
-                fontSize: '9px',
-                color: '#ffd700',
-                align: 'center'
-            }).setOrigin(0.5);
-        }
-
-        const phraseType = this.victory ? 'victoriaFinal' : 'derrotaFinal';
-        const phrase = GAME_DATA.frases[phraseType][Math.floor(Math.random() * GAME_DATA.frases[phraseType].length)];
-
-        this.add.text(400, this.victory ? 295 : 275, `"${phrase}"`, {
+        const phrase = GAME_DATA.frases.derrotaFinal[Math.floor(Math.random() * GAME_DATA.frases.derrotaFinal.length)];
+        this.add.text(400, 275, `"${phrase}"`, {
             fontFamily: '"Press Start 2P"',
             fontSize: '7px',
-            color: this.victory ? '#4ecca3' : '#e94560',
+            color: '#e94560',
             align: 'center',
             wordWrap: { width: 550 }
         }).setOrigin(0.5);
 
+        this.showCommonUI();
+        audioManager.playDefeat();
+        this.cameras.main.fadeIn(500);
+    }
+
+    showVictoryScene() {
+        // Profesor DERROTADO - cabizbajo
+        this.professor = this.add.sprite(400, 100, 'prof_defeat_0');
+        this.professor.setScale(2.5);
+
+        // Maleta pixelada al lado del profesor
+        const suitcase = this.add.graphics();
+        suitcase.fillStyle(0x8b4513);
+        suitcase.fillRect(480, 140, 40, 30);
+        suitcase.fillStyle(0x654321);
+        suitcase.fillRect(495, 135, 10, 5);
+        suitcase.fillStyle(0xffd700);
+        suitcase.fillRect(498, 150, 4, 4);
+
+        // Animación del profesor yéndose lentamente
+        this.tweens.add({
+            targets: this.professor,
+            x: -100,
+            duration: 8000,
+            ease: 'Linear',
+            delay: 3000
+        });
+
+        this.tweens.add({
+            targets: suitcase,
+            x: -180,
+            duration: 8000,
+            ease: 'Linear',
+            delay: 3000
+        });
+
+        // Título
+        this.add.text(400, 180, '¡VICTORIA!', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '24px',
+            color: '#4ecca3'
+        }).setOrigin(0.5);
+
+        this.add.text(400, 210, '¡Has derrotado al Profesor Álvaro!', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '8px',
+            color: '#ffffff'
+        }).setOrigin(0.5);
+
+        this.add.text(400, 255, epilogo, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '6px',
+            color: '#88ccaa',
+            align: 'center',
+            lineSpacing: 6
+        }).setOrigin(0.5);
+
+        // Frase final del profesor derrotado
+        const phrase = GAME_DATA.frases.victoriaFinal[Math.floor(Math.random() * GAME_DATA.frases.victoriaFinal.length)];
+        this.add.text(400, 310, `"${phrase}"`, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '7px',
+            color: '#4ecca3',
+            align: 'center',
+            wordWrap: { width: 550 }
+        }).setOrigin(0.5);
+
+        this.showCommonUI();
+        audioManager.playVictory();
+        this.createMassiveConfetti();
+        this.cameras.main.fadeIn(500);
+    }
+
+    showCommonUI() {
         // Guardar puntuación
         this.saveScore();
 
-        // Botones más pequeños y arriba
-        this.createSmallButton(130, 320, 'MENU', () => {
+        // Botones
+        this.createSmallButton(130, 340, 'MENU', () => {
             audioManager.playClick();
             this.scene.start('EnhancedMenuScene');
         });
 
-        this.createSmallButton(310, 320, 'RANKING', () => {
+        this.createSmallButton(310, 340, 'RANKING', () => {
             audioManager.playClick();
             this.scene.start('LeaderboardScene');
         });
 
-        this.createSmallButton(490, 320, 'REINTENTAR', () => {
+        this.createSmallButton(490, 340, 'REINTENTAR', () => {
             audioManager.playClick();
             this.scene.start('LevelIntroScene', { level: 1 });
         });
@@ -1358,15 +1411,6 @@ class FinalScene extends Phaser.Scene {
         if (this.score > 0) {
             this.showNameInput();
         }
-
-        if (this.victory) {
-            audioManager.playVictory();
-            this.createMassiveConfetti();
-        } else {
-            audioManager.playDefeat();
-        }
-
-        this.cameras.main.fadeIn(500);
     }
 
     showNameInput() {
