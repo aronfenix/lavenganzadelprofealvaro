@@ -266,18 +266,20 @@ const GAME_DATA = {
         {
             id: 2,
             nombre: "TOP 20 PAÍSES",
-            descripcion: "Has llegado a la BIBLIOTECA OSCURA. ¿Conoces los 20 países más poblados del mundo?",
-            escenario: "library",
+            descripcion: "Has llegado al GIMNASIO. ¡El profesor deportista te reta! ¿Conoces los 20 países más poblados?",
+            escenario: "gymnasium",
             musica: "level2",
-            color: "#e94560"
+            color: "#e94560",
+            professorType: "sporty"
         },
         {
             id: 3,
             nombre: "TOP 20 CIUDADES",
-            descripcion: "El LABORATORIO SECRETO del profesor. ¿Sabes cuáles son las 20 ciudades más pobladas?",
-            escenario: "laboratory",
+            descripcion: "¡Bienvenido al COMEDOR! El chef Álvaro cocina preguntas difíciles. ¿Sabes las 20 ciudades más pobladas?",
+            escenario: "cafeteria",
             musica: "level3",
-            color: "#ffd700"
+            color: "#ffd700",
+            professorType: "chef"
         },
         {
             id: 4,
@@ -308,13 +310,13 @@ const GAME_DATA = {
         ],
         nivel2Intro: [
             { personaje: "profesor", texto: "¡Vaya! Has sobrevivido al primer nivel..." },
-            { personaje: "profesor", texto: "Pero mi BIBLIOTECA OSCURA será tu tumba." },
-            { personaje: "profesor", texto: "¿Conoces los 20 países más poblados del MUNDO?" }
+            { personaje: "profesor", texto: "¡Pero ahora estamos en MI GIMNASIO!" },
+            { personaje: "profesor", texto: "¡Aquí entreno tu FRACASO! ¿Conoces los 20 países más poblados?" }
         ],
         nivel3Intro: [
             { personaje: "profesor", texto: "¡¿Cómo es posible que sigas aquí?!" },
-            { personaje: "profesor", texto: "Mi LABORATORIO SECRETO te destruirá." },
-            { personaje: "profesor", texto: "¿Sabes cuáles son las 20 ciudades más grandes?" }
+            { personaje: "profesor", texto: "¡Bienvenido a MI COMEDOR! ¡Hoy cocino tu DERROTA!" },
+            { personaje: "profesor", texto: "¿Sabes cuáles son las 20 ciudades más grandes del mundo?" }
         ],
         nivel4Intro: [
             { personaje: "profesor", texto: "¡IMPOSIBLE! ¡Has llegado a mi CASTILLO!" },

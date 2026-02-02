@@ -33,8 +33,8 @@ class AchievementSystem {
             },
             'level_2_complete': {
                 id: 'level_2_complete',
-                name: 'Demografo',
-                description: 'Supera el Nivel 2: Paises mas poblados',
+                name: 'Demógrafo',
+                description: 'Supera el Nivel 2: Países más poblados',
                 icon: 'trophy',
                 color: '#e94560',
                 condition: (stats) => stats.levelsCompleted >= 2,
@@ -43,7 +43,7 @@ class AchievementSystem {
             'level_3_complete': {
                 id: 'level_3_complete',
                 name: 'Urbanista',
-                description: 'Supera el Nivel 3: Ciudades mas pobladas',
+                description: 'Supera el Nivel 3: Ciudades más pobladas',
                 icon: 'trophy',
                 color: '#ffd700',
                 condition: (stats) => stats.levelsCompleted >= 3,
@@ -52,7 +52,7 @@ class AchievementSystem {
             'game_complete': {
                 id: 'game_complete',
                 name: 'Maestro del Conocimiento',
-                description: 'Derrota al Profesor Alvaro completando todos los niveles',
+                description: 'Derrota al Profesor Álvaro completando todos los niveles',
                 icon: 'crown',
                 color: '#ffd700',
                 condition: (stats) => stats.victories >= 1,
@@ -332,9 +332,9 @@ class AchievementSystem {
             'Victorias': this.stats.victories,
             'Derrotas': this.stats.losses,
             'Respuestas correctas': this.stats.totalCorrect,
-            'Combo maximo': this.stats.maxCombo,
+            'Combo máximo': this.stats.maxCombo,
             'Niveles perfectos': this.stats.perfectLevels,
-            'Mejor puntuacion': this.stats.highScore
+            'Mejor puntuación': this.stats.highScore
         };
     }
 }

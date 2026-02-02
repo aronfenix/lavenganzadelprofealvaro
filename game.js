@@ -11,15 +11,14 @@ class BootScene extends Phaser.Scene {
     preload() {
         const loadingFill = document.getElementById('loading-fill');
         const loadingText = document.getElementById('loading-text');
-        let progress = 0;
 
         const updateLoading = (text, prog) => {
             loadingText.textContent = text;
             loadingFill.style.width = prog + '%';
         };
 
-        // Generar sprites del profesor
-        updateLoading('Invocando al Profesor Álvaro...', 10);
+        // Generar sprites del profesor (normal)
+        updateLoading('Invocando al Profesor Álvaro...', 5);
         const states = ['idle', 'talk', 'laugh', 'angry', 'shock', 'point', 'victory', 'defeat', 'walk'];
         states.forEach(state => {
             for (let frame = 0; frame < 2; frame++) {
@@ -27,23 +26,55 @@ class BootScene extends Phaser.Scene {
             }
         });
 
-        // Generar escenarios
-        updateLoading('Creando el Aula Maldita...', 30);
+        // Generar sprites del profesor deportista
+        updateLoading('Preparando al entrenador...', 15);
+        const sportyStates = ['idle', 'talk', 'laugh', 'angry'];
+        sportyStates.forEach(state => {
+            for (let frame = 0; frame < 2; frame++) {
+                this.textures.addBase64(`prof_sporty_${state}_${frame}`, SpriteGenerator.createProfessorSporty(state, frame));
+            }
+        });
+
+        // Generar sprites del profesor chef
+        updateLoading('El chef entra en la cocina...', 25);
+        const chefStates = ['idle', 'talk', 'laugh', 'angry'];
+        chefStates.forEach(state => {
+            for (let frame = 0; frame < 2; frame++) {
+                this.textures.addBase64(`prof_chef_${state}_${frame}`, SpriteGenerator.createProfessorChef(state, frame));
+            }
+        });
+
+        // Generar escenarios originales
+        updateLoading('Creando el Aula Maldita...', 35);
         this.textures.addBase64('bg_classroom', SpriteGenerator.createClassroomBackground());
 
         updateLoading('Abriendo la Biblioteca Oscura...', 45);
         this.textures.addBase64('bg_library', SpriteGenerator.createLibraryBackground());
 
-        updateLoading('Activando el Laboratorio...', 60);
+        updateLoading('Activando el Laboratorio...', 55);
         this.textures.addBase64('bg_laboratory', SpriteGenerator.createLaboratoryBackground());
 
-        updateLoading('Entrando al Castillo...', 75);
+        updateLoading('Entrando al Castillo...', 60);
         this.textures.addBase64('bg_castle', SpriteGenerator.createCastleBackground());
 
-        // Generar mapas
-        updateLoading('Dibujando mapas...', 85);
+        // Generar nuevos escenarios
+        updateLoading('Preparando el Gimnasio...', 65);
+        this.textures.addBase64('bg_gymnasium', SpriteGenerator.createGymnasiumBackground());
+
+        updateLoading('Abriendo el Comedor...', 70);
+        this.textures.addBase64('bg_cafeteria', SpriteGenerator.createCafeteriaBackground());
+
+        // Generar mapas pequeños
+        updateLoading('Dibujando mapas...', 75);
         this.textures.addBase64('map_europe', SpriteGenerator.createEuropeMap());
         this.textures.addBase64('map_world', SpriteGenerator.createWorldMap());
+
+        // Generar mapas grandes interactivos
+        updateLoading('Cartografiando Europa...', 80);
+        this.textures.addBase64('map_europe_large', SpriteGenerator.createEuropeMapLarge());
+
+        updateLoading('Cartografiando el Mundo...', 85);
+        this.textures.addBase64('map_world_large', SpriteGenerator.createWorldMapLarge());
 
         // Generar partículas y UI
         updateLoading('Preparando efectos...', 90);
@@ -52,6 +83,7 @@ class BootScene extends Phaser.Scene {
         });
 
         // Power-ups
+        updateLoading('Cargando power-ups...', 95);
         ['fifty', 'hint', 'freeze', 'extraLife'].forEach(type => {
             this.textures.addBase64(`powerup_${type}`, SpriteGenerator.createPowerupIcon(type));
         });
@@ -245,7 +277,7 @@ class IntroScene extends Phaser.Scene {
     endIntro() {
         this.cameras.main.fadeOut(500);
         this.time.delayedCall(500, () => {
-            this.scene.start('MenuScene');
+            this.scene.start('EnhancedMenuScene');
         });
     }
 }
@@ -518,8 +550,16 @@ class LevelIntroScene extends Phaser.Scene {
             lineSpacing: 8
         }).setOrigin(0.5).setAlpha(0);
 
-        // Profesor
-        this.professor = this.add.sprite(400, 450, 'prof_talk_0');
+        // Profesor según tipo de nivel
+        let profSprite = 'prof_talk_0';
+        if (levelInfo.professorType === 'sporty') {
+            profSprite = 'prof_sporty_talk_0';
+        } else if (levelInfo.professorType === 'chef') {
+            profSprite = 'prof_chef_talk_0';
+        }
+        this.professorType = levelInfo.professorType || 'normal';
+
+        this.professor = this.add.sprite(400, 450, profSprite);
         this.professor.setScale(2.5);
         this.professor.setAlpha(0);
 
@@ -553,12 +593,14 @@ class LevelIntroScene extends Phaser.Scene {
             delay: 1000
         });
 
-        // Animación del profesor
+        // Animación del profesor según tipo
+        const profPrefix = this.professorType === 'sporty' ? 'prof_sporty' :
+                           this.professorType === 'chef' ? 'prof_chef' : 'prof';
         this.time.addEvent({
             delay: 200,
             callback: () => {
                 const frame = this.professor.texture.key.endsWith('0') ? 1 : 0;
-                this.professor.setTexture(`prof_talk_${frame}`);
+                this.professor.setTexture(`${profPrefix}_talk_${frame}`);
             },
             loop: true
         });

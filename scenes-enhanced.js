@@ -14,44 +14,63 @@ class CinematicIntroScene extends Phaser.Scene {
         // Fondo negro inicial
         this.bg = this.add.rectangle(400, 300, 800, 600, 0x0a0a15);
 
-        // Variables de estado
-        this.step = 0;
-
-        // Skip button
-        this.add.text(700, 20, 'ENTER: Saltar', {
+        // Skip button - funciona en cualquier momento
+        this.add.text(650, 20, 'ENTER/CLICK: Saltar', {
             fontFamily: '"Press Start 2P"',
-            fontSize: '8px',
+            fontSize: '7px',
             color: '#444444'
         });
 
+        this.canSkip = true;
+
         this.input.keyboard.on('keydown-ENTER', () => {
-            this.scene.start('EnhancedMenuScene');
+            if (this.canSkip) this.goToMenu();
         });
 
-        // Iniciar intro simplificada
+        this.input.on('pointerdown', () => {
+            if (this.canSkip) this.goToMenu();
+        });
+
+        // Iniciar intro
         this.startIntro();
     }
 
+    goToMenu() {
+        this.canSkip = false;
+        if (this.profAnim) this.profAnim.destroy();
+        this.cameras.main.fadeOut(300);
+        this.time.delayedCall(300, () => {
+            this.scene.start('EnhancedMenuScene');
+        });
+    }
+
     startIntro() {
-        // Paso 1: Mostrar año
-        const yearText = this.add.text(400, 300, '2024', {
+        // Paso 1: Mostrar año y lugar
+        const yearText = this.add.text(400, 280, 'CEIP PERU - MADRID', {
             fontFamily: '"Press Start 2P"',
-            fontSize: '48px',
+            fontSize: '24px',
             color: '#4ecca3'
         }).setOrigin(0.5).setAlpha(0);
 
+        const year2Text = this.add.text(400, 330, '2026', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '48px',
+            color: '#e94560'
+        }).setOrigin(0.5).setAlpha(0);
+
         this.tweens.add({
-            targets: yearText,
+            targets: [yearText, year2Text],
             alpha: 1,
             duration: 1000,
             onComplete: () => {
-                this.time.delayedCall(1500, () => {
+                this.time.delayedCall(2000, () => {
                     this.tweens.add({
-                        targets: yearText,
+                        targets: [yearText, year2Text],
                         alpha: 0,
                         duration: 500,
                         onComplete: () => {
                             yearText.destroy();
+                            year2Text.destroy();
                             this.showNarration();
                         }
                     });
@@ -62,11 +81,12 @@ class CinematicIntroScene extends Phaser.Scene {
 
     showNarration() {
         // Texto de narración
-        const narrationText = this.add.text(400, 250, 'En un instituto aparentemente normal...', {
+        const narrationText = this.add.text(400, 280, 'En el CEIP Peru de Madrid...', {
             fontFamily: '"Press Start 2P"',
             fontSize: '14px',
             color: '#4ecca3',
-            align: 'center'
+            align: 'center',
+            wordWrap: { width: 700 }
         }).setOrigin(0.5).setAlpha(0);
 
         this.tweens.add({
@@ -76,9 +96,9 @@ class CinematicIntroScene extends Phaser.Scene {
         });
 
         this.time.delayedCall(2500, () => {
-            narrationText.setText('Algo oscuro se gestaba...');
+            narrationText.setText('Los alumnos de 6º de Primaria\nenfrentan su mayor desafío...');
 
-            this.time.delayedCall(2000, () => {
+            this.time.delayedCall(2500, () => {
                 this.tweens.add({
                     targets: narrationText,
                     alpha: 0,
@@ -94,14 +114,14 @@ class CinematicIntroScene extends Phaser.Scene {
 
     showProfessor() {
         // Profesor aparece
-        this.professor = this.add.sprite(400, 280, 'prof_idle_0');
-        this.professor.setScale(4);
+        this.professor = this.add.sprite(400, 250, 'prof_idle_0');
+        this.professor.setScale(3.5);
         this.professor.setAlpha(0);
 
         this.tweens.add({
             targets: this.professor,
             alpha: 1,
-            scale: 4.5,
+            scale: 4,
             duration: 1000,
             ease: 'Back.easeOut'
         });
@@ -119,15 +139,15 @@ class CinematicIntroScene extends Phaser.Scene {
         });
 
         // Dialogo
-        this.dialogueBox = this.add.container(400, 500);
+        this.dialogueBox = this.add.container(400, 520);
 
         const boxBg = this.add.graphics();
         boxBg.fillStyle(0x1a1a2e, 0.95);
-        boxBg.fillRoundedRect(-350, -40, 700, 80, 10);
+        boxBg.fillRoundedRect(-350, -50, 700, 100, 10);
         boxBg.lineStyle(3, 0xe94560);
-        boxBg.strokeRoundedRect(-350, -40, 700, 80, 10);
+        boxBg.strokeRoundedRect(-350, -50, 700, 100, 10);
 
-        const speakerText = this.add.text(-330, -25, 'PROFESOR ALVARO', {
+        const speakerText = this.add.text(-330, -35, 'PROFESOR ALVARO', {
             fontFamily: '"Press Start 2P"',
             fontSize: '10px',
             color: '#e94560'
@@ -135,7 +155,7 @@ class CinematicIntroScene extends Phaser.Scene {
 
         this.dialogueText = this.add.text(0, 10, '', {
             fontFamily: '"Press Start 2P"',
-            fontSize: '11px',
+            fontSize: '10px',
             color: '#ffffff',
             align: 'center',
             wordWrap: { width: 650 }
@@ -151,15 +171,16 @@ class CinematicIntroScene extends Phaser.Scene {
         });
 
         // Secuencia de dialogos
-        this.showDialogues();
+        this.time.delayedCall(500, () => this.showDialogues());
     }
 
     showDialogues() {
         const dialogues = [
-            'Llevo ANOS soportando la ignorancia de mis alumnos...',
-            'Nadie estudia! Nadie se esfuerza!',
-            'MUAJAJAJA! He creado el EXAMEN DEFINITIVO!',
-            'Un examen del que NADIE puede escapar!'
+            'Llevo AÑOS enseñando Geografía a 6º de Primaria...',
+            '¡Y estoy HARTO de que nadie estudie!',
+            '¿Creéis que las capitales se aprenden solas?',
+            '¡MUAJAJAJA! ¡He creado el EXAMEN DEFINITIVO!',
+            '¡Un examen del que NINGÚN alumno puede escapar!'
         ];
 
         let index = 0;
@@ -176,7 +197,7 @@ class CinematicIntroScene extends Phaser.Scene {
             this.dialogueText.setText('');
 
             const typeTimer = this.time.addEvent({
-                delay: 40,
+                delay: 35,
                 callback: () => {
                     if (charIndex < text.length) {
                         this.dialogueText.setText(text.substring(0, charIndex + 1));
@@ -189,7 +210,7 @@ class CinematicIntroScene extends Phaser.Scene {
             });
 
             // Efectos según diálogo
-            if (index === 2) {
+            if (index === 3) {
                 // Risa malvada
                 this.time.delayedCall(500, () => {
                     if (this.profAnim) this.profAnim.destroy();
@@ -204,11 +225,12 @@ class CinematicIntroScene extends Phaser.Scene {
                         loop: true
                     });
                     this.effects.shake(0.01, 300);
+                    audioManager.playLaugh && audioManager.playLaugh();
                 });
             }
 
             index++;
-            this.time.delayedCall(3000, showNext);
+            this.time.delayedCall(2800, showNext);
         };
 
         showNext();
@@ -218,177 +240,16 @@ class CinematicIntroScene extends Phaser.Scene {
         // Limpiar
         if (this.profAnim) this.profAnim.destroy();
 
-        // Fade out
-        this.cameras.main.fadeOut(800, 0, 0, 0);
+        // Mostrar texto final
+        this.dialogueText.setText('Pero los alumnos de 6º decidieron plantarle cara...');
 
-        this.time.delayedCall(800, () => {
-            this.showTitle();
-        });
-    }
-
-    showTitle() {
-        this.cinematic.exit();
-
-        // Fondo con particulas
-        this.bg.setFillStyle(0x0a0a15);
-
-        // Particulas de fondo
-        for (let i = 0; i < 50; i++) {
-            const star = this.add.rectangle(
-                Math.random() * 800,
-                Math.random() * 600,
-                2 + Math.random() * 3,
-                2 + Math.random() * 3,
-                0xffffff
-            ).setAlpha(0.3 + Math.random() * 0.5);
-
-            this.tweens.add({
-                targets: star,
-                alpha: 0.1,
-                duration: 1000 + Math.random() * 2000,
-                yoyo: true,
-                repeat: -1
-            });
-        }
-
-        // Titulo con efecto de aparicion
-        const title1 = this.add.text(400, 180, 'LA VENGANZA DEL', {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '24px',
-            color: '#e94560'
-        }).setOrigin(0.5).setAlpha(0);
-
-        const title2 = this.add.text(400, 240, 'PROFESOR ALVARO', {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '32px',
-            color: '#e94560'
-        }).setOrigin(0.5).setAlpha(0);
-
-        // Glow effect
-        const glow = this.add.text(400, 240, 'PROFESOR ALVARO', {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '32px',
-            color: '#ff6b6b'
-        }).setOrigin(0.5).setAlpha(0);
-
-        this.tweens.add({
-            targets: title1,
-            alpha: 1,
-            y: 150,
-            duration: 800,
-            delay: 500,
-            ease: 'Back.easeOut'
-        });
-
-        this.tweens.add({
-            targets: [title2, glow],
-            alpha: 1,
-            y: 220,
-            duration: 800,
-            delay: 1000,
-            ease: 'Back.easeOut'
-        });
-
-        this.tweens.add({
-            targets: glow,
-            alpha: 0.5,
-            duration: 1000,
-            yoyo: true,
-            repeat: -1,
-            delay: 2000
-        });
-
-        // Subtitulo
-        const subtitle = this.add.text(400, 280, 'Un juego de conocimiento y supervivencia', {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '10px',
-            color: '#4ecca3'
-        }).setOrigin(0.5).setAlpha(0);
-
-        this.tweens.add({
-            targets: subtitle,
-            alpha: 1,
-            duration: 800,
-            delay: 1800
-        });
-
-        // Profesor miniatura
-        const miniProf = this.add.sprite(400, 380, 'prof_idle_0');
-        miniProf.setScale(2.5).setAlpha(0);
-
-        this.tweens.add({
-            targets: miniProf,
-            alpha: 1,
-            duration: 800,
-            delay: 2200
-        });
-
-        this.time.addEvent({
-            delay: 400,
-            callback: () => {
-                const frame = miniProf.texture.key.endsWith('0') ? 1 : 0;
-                miniProf.setTexture(`prof_idle_${frame}`);
-            },
-            loop: true
-        });
-
-        // Boton de continuar
-        this.time.delayedCall(3000, () => {
-            const continueText = this.add.text(400, 500, '[ PULSA PARA CONTINUAR ]', {
-                fontFamily: '"Press Start 2P"',
-                fontSize: '12px',
-                color: '#ffd700'
-            }).setOrigin(0.5).setAlpha(0);
-
-            this.tweens.add({
-                targets: continueText,
-                alpha: 1,
-                duration: 500
-            });
-
-            this.tweens.add({
-                targets: continueText,
-                alpha: 0.5,
-                duration: 800,
-                yoyo: true,
-                repeat: -1,
-                delay: 500
-            });
-
-            this.input.once('pointerdown', () => {
-                audioManager.playClick && audioManager.playClick();
-                this.cameras.main.fadeOut(500);
-                this.time.delayedCall(500, () => {
-                    this.scene.start('EnhancedMenuScene');
-                });
-            });
-
-            // Tambien permitir saltar con teclado
-            this.input.keyboard.once('keydown', () => {
-                audioManager.playClick && audioManager.playClick();
-                this.cameras.main.fadeOut(500);
-                this.time.delayedCall(500, () => {
-                    this.scene.start('EnhancedMenuScene');
-                });
+        this.time.delayedCall(2500, () => {
+            // Ir al menu
+            this.cameras.main.fadeOut(800, 0, 0, 0);
+            this.time.delayedCall(800, () => {
+                this.scene.start('EnhancedMenuScene');
             });
         });
-
-        // Skip intro text
-        this.add.text(700, 580, 'ENTER: Saltar', {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '8px',
-            color: '#444444'
-        });
-
-        this.input.keyboard.on('keydown-ENTER', () => {
-            this.scene.start('EnhancedMenuScene');
-        });
-
-        this.cameras.main.fadeIn(1000);
-    }
-
-    delay(ms) {
-        return new Promise(resolve => this.time.delayedCall(ms, resolve));
     }
 }
 
@@ -698,19 +559,19 @@ class EnhancedMenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         const content = this.add.text(0, -20,
-            '4 NIVELES DE DESAFIO:\n\n' +
+            '4 NIVELES DE DESAFÍO:\n\n' +
             '1. Capitales de Europa\n' +
-            '2. TOP 20 Paises mas poblados\n' +
-            '3. TOP 20 Ciudades mas pobladas\n' +
-            '4. EXAMEN FINAL - TODO MEZCLADO!\n\n' +
+            '2. TOP 20 Países más poblados\n' +
+            '3. TOP 20 Ciudades más pobladas\n' +
+            '4. EXAMEN FINAL - ¡TODO MEZCLADO!\n\n' +
             '* 10 preguntas por nivel\n' +
             '* Necesitas 7/10 para pasar\n' +
             '* Tienes 3 vidas\n' +
-            '* Consigue COMBOS para mas puntos\n' +
+            '* Consigue COMBOS para más puntos\n' +
             '* MINIJUEGOS especiales a mitad de nivel\n' +
             '* Usa el MODO ESTUDIO para practicar\n\n' +
-            'Demuestra que el conocimiento\n' +
-            'es mas fuerte que el miedo!', {
+            '¡Demuestra que el conocimiento\n' +
+            'es más fuerte que el miedo!', {
             fontFamily: '"Press Start 2P"',
             fontSize: '10px',
             color: '#4ecca3',

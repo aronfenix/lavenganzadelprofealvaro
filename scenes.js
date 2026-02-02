@@ -300,7 +300,20 @@ class GameScene extends Phaser.Scene {
     }
 
     createProfessor() {
-        this.professor = this.add.sprite(100, 450, 'prof_idle_0');
+        // Determinar tipo de profesor según nivel
+        const levelInfo = GAME_DATA.niveles[this.level - 1];
+        this.professorType = levelInfo.professorType || 'normal';
+
+        // Prefijo para los sprites
+        let spritePrefix = 'prof';
+        if (this.professorType === 'sporty') {
+            spritePrefix = 'prof_sporty';
+        } else if (this.professorType === 'chef') {
+            spritePrefix = 'prof_chef';
+        }
+        this.spritePrefix = spritePrefix;
+
+        this.professor = this.add.sprite(100, 450, `${spritePrefix}_idle_0`);
         this.professor.setScale(2);
 
         this.professorIdleAnim = this.time.addEvent({
@@ -308,7 +321,7 @@ class GameScene extends Phaser.Scene {
             callback: () => {
                 if (this.professorState === 'idle') {
                     const frame = this.professor.texture.key.endsWith('0') ? 1 : 0;
-                    this.professor.setTexture(`prof_idle_${frame}`);
+                    this.professor.setTexture(`${this.spritePrefix}_idle_${frame}`);
                 }
             },
             loop: true
@@ -320,7 +333,15 @@ class GameScene extends Phaser.Scene {
         this.speechBubble.fillStyle(0xffffff, 0.95);
         this.speechBubble.fillRoundedRect(20, 520, 160, 60, 8);
 
-        this.speechText = this.add.text(100, 550, '"Empecemos..."', {
+        // Frase inicial según tipo
+        let initialPhrase = '"Empecemos..."';
+        if (this.professorType === 'sporty') {
+            initialPhrase = '"¡A sudar!"';
+        } else if (this.professorType === 'chef') {
+            initialPhrase = '"¡A cocinar!"';
+        }
+
+        this.speechText = this.add.text(100, 550, initialPhrase, {
             fontFamily: '"Press Start 2P"',
             fontSize: '7px',
             color: '#0a0a15',
@@ -331,31 +352,36 @@ class GameScene extends Phaser.Scene {
 
     setProfessorState(state, duration = 2000) {
         this.professorState = state;
+        const prefix = this.spritePrefix || 'prof';
 
-        if (state === 'laugh') {
+        // Los sprites sporty y chef solo tienen idle, talk, laugh, angry
+        const validStates = ['idle', 'talk', 'laugh', 'angry'];
+        const actualState = validStates.includes(state) ? state : 'idle';
+
+        if (actualState === 'laugh') {
             this.professorAnim = this.time.addEvent({
                 delay: 150,
                 callback: () => {
                     const frame = this.professor.texture.key.endsWith('0') ? 1 : 0;
-                    this.professor.setTexture(`prof_laugh_${frame}`);
+                    this.professor.setTexture(`${prefix}_laugh_${frame}`);
                 },
                 loop: true
             });
-        } else if (state === 'angry') {
+        } else if (actualState === 'angry') {
             this.professorAnim = this.time.addEvent({
                 delay: 200,
                 callback: () => {
                     const frame = this.professor.texture.key.endsWith('0') ? 1 : 0;
-                    this.professor.setTexture(`prof_angry_${frame}`);
+                    this.professor.setTexture(`${prefix}_angry_${frame}`);
                 },
                 loop: true
             });
-        } else if (state === 'talk') {
+        } else if (actualState === 'talk') {
             this.professorAnim = this.time.addEvent({
                 delay: 150,
                 callback: () => {
                     const frame = this.professor.texture.key.endsWith('0') ? 1 : 0;
-                    this.professor.setTexture(`prof_talk_${frame}`);
+                    this.professor.setTexture(`${prefix}_talk_${frame}`);
                 },
                 loop: true
             });
@@ -364,7 +390,7 @@ class GameScene extends Phaser.Scene {
         this.time.delayedCall(duration, () => {
             if (this.professorAnim) this.professorAnim.destroy();
             this.professorState = 'idle';
-            this.professor.setTexture('prof_idle_0');
+            this.professor.setTexture(`${prefix}_idle_0`);
         });
     }
 
@@ -832,47 +858,76 @@ class GameScene extends Phaser.Scene {
 
         this.cameras.main.fadeOut(500);
         this.time.delayedCall(500, () => {
+            const baseData = {
+                level: this.level,
+                totalCorrect: this.totalCorrect,
+                score: this.score,
+                lives: this.lives,
+                powerups: this.powerups,
+                correctAnswers: this.correctAnswers,
+                maxCombo: this.maxCombo
+            };
+
             // Decidir tipo de minijuego según nivel
             if (this.level === 2) {
-                // Nivel 2: Ordenar países por población
-                this.scene.start('OrderingGameScene', {
-                    level: this.level,
-                    totalCorrect: this.totalCorrect,
-                    score: this.score,
-                    lives: this.lives,
-                    powerups: this.powerups,
-                    isCountries: true
-                });
-            } else if (this.level === 3) {
-                // Nivel 3: Emparejar ciudades con países
-                this.scene.start('MatchingGameScene', {
-                    level: this.level,
-                    totalCorrect: this.totalCorrect,
-                    score: this.score,
-                    lives: this.lives,
-                    powerups: this.powerups,
-                    matchType: 'cities'
-                });
-            } else if (this.level === 4) {
-                // Nivel 4: Alternar entre ordenar ciudades y emparejar capitales
+                // Nivel 2: 50% ordenar países, 50% mapa de Europa
                 const random = Math.random();
                 if (random < 0.5) {
                     this.scene.start('OrderingGameScene', {
-                        level: this.level,
-                        totalCorrect: this.totalCorrect,
-                        score: this.score,
-                        lives: this.lives,
-                        powerups: this.powerups,
-                        isCountries: false // ciudades
+                        ...baseData,
+                        isCountries: true
                     });
                 } else {
+                    this.scene.start('MapGameScene', {
+                        ...baseData,
+                        mapType: 'europe',
+                        isCapitals: true
+                    });
+                }
+            } else if (this.level === 3) {
+                // Nivel 3: 33% emparejar, 33% ordenar ciudades, 33% mapa mundo
+                const random = Math.random();
+                if (random < 0.33) {
                     this.scene.start('MatchingGameScene', {
-                        level: this.level,
-                        totalCorrect: this.totalCorrect,
-                        score: this.score,
-                        lives: this.lives,
-                        powerups: this.powerups,
+                        ...baseData,
+                        matchType: 'cities'
+                    });
+                } else if (random < 0.66) {
+                    this.scene.start('OrderingGameScene', {
+                        ...baseData,
+                        isCountries: false
+                    });
+                } else {
+                    this.scene.start('MapGameScene', {
+                        ...baseData,
+                        mapType: 'world',
+                        isCapitals: false
+                    });
+                }
+            } else if (this.level === 4) {
+                // Nivel 4: Cualquiera de los 4 minijuegos
+                const random = Math.random();
+                if (random < 0.25) {
+                    this.scene.start('OrderingGameScene', {
+                        ...baseData,
+                        isCountries: false
+                    });
+                } else if (random < 0.5) {
+                    this.scene.start('MatchingGameScene', {
+                        ...baseData,
                         matchType: 'capitals'
+                    });
+                } else if (random < 0.75) {
+                    this.scene.start('MapGameScene', {
+                        ...baseData,
+                        mapType: 'europe',
+                        isCapitals: true
+                    });
+                } else {
+                    this.scene.start('MapGameScene', {
+                        ...baseData,
+                        mapType: 'world',
+                        isCapitals: false
                     });
                 }
             }
@@ -1206,9 +1261,9 @@ class FinalScene extends Phaser.Scene {
         const bgColor = this.victory ? 0x1a2a1a : 0x2a1a1a;
         this.add.rectangle(400, 300, 800, 600, bgColor);
 
-        const profState = this.victory ? 'defeat' : 'victory';
-        this.professor = this.add.sprite(400, 150, `prof_${this.victory ? 'angry' : 'laugh'}_0`);
-        this.professor.setScale(3.5);
+        // Profesor más pequeño y arriba
+        this.professor = this.add.sprite(400, 80, `prof_${this.victory ? 'angry' : 'laugh'}_0`);
+        this.professor.setScale(2.5);
 
         this.time.addEvent({
             delay: this.victory ? 100 : 200,
@@ -1226,9 +1281,9 @@ class FinalScene extends Phaser.Scene {
         const title = this.victory ? '¡VICTORIA!' : 'GAME OVER';
         const titleColor = this.victory ? '#4ecca3' : '#e94560';
 
-        this.add.text(400, 280, title, {
+        this.add.text(400, 170, title, {
             fontFamily: '"Press Start 2P"',
-            fontSize: '28px',
+            fontSize: '24px',
             color: titleColor
         }).setOrigin(0.5);
 
@@ -1236,49 +1291,65 @@ class FinalScene extends Phaser.Scene {
             '¡Has derrotado al Profesor Álvaro!' :
             (this.reason === 'lives' ? 'Te has quedado sin vidas...' : 'No has superado el nivel...');
 
-        this.add.text(400, 320, subtitle, {
+        this.add.text(400, 200, subtitle, {
             fontFamily: '"Press Start 2P"',
-            fontSize: '9px',
+            fontSize: '8px',
             color: '#ffffff'
         }).setOrigin(0.5);
 
-        this.add.text(400, 370,
-            `Nivel alcanzado: ${this.level}/4\n` +
-            `Aciertos totales: ${this.totalCorrect}\n` +
-            `Puntuación final: ${this.score}`, {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '10px',
-            color: '#ffd700',
-            align: 'center',
-            lineSpacing: 8
-        }).setOrigin(0.5);
+        // Epílogo narrativo según victoria o derrota
+        if (this.victory) {
+            const epilogos = [
+                'El Profesor Álvaro, derrotado y humillado,\ndecide retirarse al campo a criar gallinas.\n"Ya no me queda nada que enseñar..."',
+                'Ante la evidencia de tu conocimiento,\nel Profesor Álvaro abandona la enseñanza.\nAhora cultiva tomates en un pueblo de Segovia.',
+                'El temido Profesor Álvaro se retira.\nSe le vio por última vez comprando una furgoneta\npara irse a vivir a las montañas.',
+                'Victoria total. El Profesor Álvaro\nha vendido su bata de laboratorio\ny ahora hace quesos artesanales en Asturias.'
+            ];
+            const epilogo = epilogos[Math.floor(Math.random() * epilogos.length)];
+
+            this.add.text(400, 248, epilogo, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '6px',
+                color: '#88ccaa',
+                align: 'center',
+                lineSpacing: 6
+            }).setOrigin(0.5);
+        } else {
+            this.add.text(400, 240,
+                `Nivel: ${this.level}/4  |  Aciertos: ${this.totalCorrect}  |  Puntos: ${this.score}`, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '9px',
+                color: '#ffd700',
+                align: 'center'
+            }).setOrigin(0.5);
+        }
 
         const phraseType = this.victory ? 'victoriaFinal' : 'derrotaFinal';
         const phrase = GAME_DATA.frases[phraseType][Math.floor(Math.random() * GAME_DATA.frases[phraseType].length)];
 
-        this.add.text(400, 440, `"${phrase}"`, {
+        this.add.text(400, this.victory ? 295 : 275, `"${phrase}"`, {
             fontFamily: '"Press Start 2P"',
-            fontSize: '8px',
+            fontSize: '7px',
             color: this.victory ? '#4ecca3' : '#e94560',
             align: 'center',
-            wordWrap: { width: 600 }
+            wordWrap: { width: 550 }
         }).setOrigin(0.5);
 
         // Guardar puntuación
         this.saveScore();
 
-        // Botones (posicionados más arriba para dejar espacio al teclado)
-        this.createButton(200, 480, 'MENU', () => {
+        // Botones más pequeños y arriba
+        this.createSmallButton(130, 320, 'MENU', () => {
             audioManager.playClick();
-            this.scene.start('MenuScene');
+            this.scene.start('EnhancedMenuScene');
         });
 
-        this.createButton(400, 480, 'RANKING', () => {
+        this.createSmallButton(310, 320, 'RANKING', () => {
             audioManager.playClick();
             this.scene.start('LeaderboardScene');
         });
 
-        this.createButton(600, 480, 'REINTENTAR', () => {
+        this.createSmallButton(490, 320, 'REINTENTAR', () => {
             audioManager.playClick();
             this.scene.start('LevelIntroScene', { level: 1 });
         });
@@ -1299,7 +1370,7 @@ class FinalScene extends Phaser.Scene {
     }
 
     showNameInput() {
-        this.add.text(400, 535, 'Introduce tu nombre:', {
+        this.add.text(400, 365, 'Introduce tu nombre:', {
             fontFamily: '"Press Start 2P"',
             fontSize: '8px',
             color: '#4ecca3'
@@ -1307,31 +1378,31 @@ class FinalScene extends Phaser.Scene {
 
         // Input visual
         this.nameInput = '';
-        this.nameContainer = this.add.container(400, 560);
+        this.nameContainer = this.add.container(400, 390);
 
         const inputBg = this.add.graphics();
         inputBg.fillStyle(0x1a1a2e, 1);
-        inputBg.fillRoundedRect(-150, -15, 240, 30, 5);
+        inputBg.fillRoundedRect(-120, -12, 180, 24, 5);
         inputBg.lineStyle(2, 0x4ecca3);
-        inputBg.strokeRoundedRect(-150, -15, 240, 30, 5);
+        inputBg.strokeRoundedRect(-120, -12, 180, 24, 5);
 
-        this.nameDisplay = this.add.text(0, 0, '_', {
+        this.nameDisplay = this.add.text(-30, 0, '_', {
             fontFamily: '"Press Start 2P"',
-            fontSize: '12px',
+            fontSize: '10px',
             color: '#4ecca3'
         }).setOrigin(0.5);
 
         // Botón guardar
-        const saveBtn = this.add.container(150, 0);
-        const saveBg = this.add.rectangle(0, 0, 70, 28, 0x4ecca3);
-        const saveText = this.add.text(0, 0, 'GUARDAR', {
+        const saveBtn = this.add.container(100, 0);
+        const saveBg = this.add.rectangle(0, 0, 60, 22, 0x4ecca3);
+        const saveText = this.add.text(0, 0, 'OK', {
             fontFamily: '"Press Start 2P"',
-            fontSize: '7px',
+            fontSize: '8px',
             color: '#0a0a15'
         }).setOrigin(0.5);
 
         saveBtn.add([saveBg, saveText]);
-        saveBtn.setSize(70, 28);
+        saveBtn.setSize(60, 22);
         saveBtn.setInteractive();
         saveBtn.on('pointerdown', () => this.saveName());
 
@@ -1355,7 +1426,8 @@ class FinalScene extends Phaser.Scene {
     }
 
     createNameKeyboard() {
-        this.keyboard = this.add.container(400, 640);
+        // Teclado compacto que cabe en pantalla
+        this.keyboard = this.add.container(400, 490);
 
         const keys = 'QWERTYUIOPASDFGHJKLZXCVBNM';
         const rows = [
@@ -1365,24 +1437,24 @@ class FinalScene extends Phaser.Scene {
         ];
 
         rows.forEach((row, rowIndex) => {
-            const startX = -((row.length - 1) * 35) / 2;
+            const startX = -((row.length - 1) * 28) / 2;
 
             for (let i = 0; i < row.length; i++) {
                 const key = row[i];
-                const x = startX + i * 35;
-                const y = rowIndex * 38 - 38;
+                const x = startX + i * 28;
+                const y = rowIndex * 32 - 32;
 
                 const keyBtn = this.add.container(x, y);
-                const keyBg = this.add.rectangle(0, 0, 32, 32, 0x1a1a2e);
+                const keyBg = this.add.rectangle(0, 0, 26, 28, 0x1a1a2e);
                 keyBg.setStrokeStyle(2, 0x4ecca3);
                 const keyText = this.add.text(0, 0, key, {
                     fontFamily: '"Press Start 2P"',
-                    fontSize: '10px',
+                    fontSize: '8px',
                     color: '#4ecca3'
                 }).setOrigin(0.5);
 
                 keyBtn.add([keyBg, keyText]);
-                keyBtn.setSize(32, 32);
+                keyBtn.setSize(26, 28);
                 keyBtn.setInteractive();
 
                 keyBtn.on('pointerdown', () => {
@@ -1397,18 +1469,18 @@ class FinalScene extends Phaser.Scene {
             }
         });
 
-        // Botón borrar
-        const delBtn = this.add.container(160, 38);
-        const delBg = this.add.rectangle(0, 0, 60, 32, 0x1a1a2e);
+        // Botón borrar al lado de la última fila
+        const delBtn = this.add.container(130, 32);
+        const delBg = this.add.rectangle(0, 0, 50, 28, 0x1a1a2e);
         delBg.setStrokeStyle(2, 0xe94560);
         const delText = this.add.text(0, 0, 'DEL', {
             fontFamily: '"Press Start 2P"',
-            fontSize: '9px',
+            fontSize: '8px',
             color: '#e94560'
         }).setOrigin(0.5);
 
         delBtn.add([delBg, delText]);
-        delBtn.setSize(60, 32);
+        delBtn.setSize(50, 28);
         delBtn.setInteractive();
         delBtn.on('pointerdown', () => {
             this.nameInput = this.nameInput.slice(0, -1);
@@ -1417,6 +1489,36 @@ class FinalScene extends Phaser.Scene {
         });
 
         this.keyboard.add(delBtn);
+    }
+
+    createSmallButton(x, y, text, callback) {
+        const container = this.add.container(x, y);
+
+        const bg = this.add.rectangle(0, 0, 140, 30, 0x16213e);
+        bg.setStrokeStyle(2, 0x4ecca3);
+
+        const label = this.add.text(0, 0, text, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '8px',
+            color: '#4ecca3'
+        }).setOrigin(0.5);
+
+        container.add([bg, label]);
+        container.setSize(140, 30);
+        container.setInteractive();
+
+        container.on('pointerover', () => {
+            bg.setFillStyle(0x4ecca3);
+            label.setColor('#0a0a15');
+        });
+
+        container.on('pointerout', () => {
+            bg.setFillStyle(0x16213e);
+            label.setColor('#4ecca3');
+        });
+
+        container.on('pointerdown', callback);
+        return container;
     }
 
     async saveName() {
@@ -1449,12 +1551,15 @@ class FinalScene extends Phaser.Scene {
         // Feedback visual
         if (this.nameContainer) {
             this.nameContainer.destroy();
-            this.add.text(400, 575, 'Puntuacion guardada!', {
-                fontFamily: '"Press Start 2P"',
-                fontSize: '8px',
-                color: '#4ecca3'
-            }).setOrigin(0.5);
         }
+        if (this.keyboard) {
+            this.keyboard.destroy();
+        }
+        this.add.text(400, 420, '¡Puntuación guardada!', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '10px',
+            color: '#4ecca3'
+        }).setOrigin(0.5);
     }
 
     saveScore() {
@@ -1562,7 +1667,7 @@ class LeaderboardScene extends Phaser.Scene {
         // Botón volver
         this.createButton(400, 560, 'VOLVER AL MENU', () => {
             audioManager.playClick();
-            this.scene.start('MenuScene');
+            this.scene.start('EnhancedMenuScene');
         });
 
         this.cameras.main.fadeIn(500);
@@ -1570,7 +1675,7 @@ class LeaderboardScene extends Phaser.Scene {
 
     displayLeaderboard(scores) {
         if (scores.length === 0) {
-            this.add.text(400, 300, 'No hay puntuaciones todavia.\nSe el primero en jugar!', {
+            this.add.text(400, 300, 'No hay puntuaciones todavía.\n¡Sé el primero en jugar!', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '10px',
                 color: '#666666',
@@ -1685,7 +1790,7 @@ class LeaderboardScene extends Phaser.Scene {
     }
 }
 
-// ==================== MINIJUEGO: ORDENAR POR POBLACION ====================
+// ==================== MINIJUEGO: ORDENAR POR POBLACIÓN ====================
 class OrderingGameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'OrderingGameScene' });
@@ -1703,55 +1808,87 @@ class OrderingGameScene extends Phaser.Scene {
     }
 
     create() {
-        const levelInfo = GAME_DATA.niveles[this.level - 1];
+        try {
+            const levelInfo = GAME_DATA.niveles[this.level - 1];
 
-        // Fondo
-        this.bg = this.add.image(400, 300, `bg_${levelInfo.escenario}`);
-        this.bg.setAlpha(0.5);
+            // Fondo
+            if (levelInfo && levelInfo.escenario) {
+                this.bg = this.add.image(400, 300, `bg_${levelInfo.escenario}`);
+                this.bg.setAlpha(0.5);
+            } else {
+                this.add.rectangle(400, 300, 800, 600, 0x1a1a2e);
+            }
 
-        // Título
-        this.add.text(400, 30, 'ORDENA POR POBLACION', {
+            // Título
+            this.add.text(400, 30, 'ORDENA POR POBLACIÓN', {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '16px',
+                color: '#ffd700'
+            }).setOrigin(0.5);
+
+            this.add.text(400, 55, '(de MÁS a MENOS poblado)', {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '9px',
+                color: '#4ecca3'
+            }).setOrigin(0.5);
+
+            // Seleccionar 5 elementos aleatorios
+            const source = this.isCountries ? GAME_DATA.top20Paises : GAME_DATA.top20Ciudades;
+
+            // Verificar que tenemos datos
+            if (!source || source.length === 0) {
+                console.error('OrderingGameScene: No se encontraron datos para ordenar');
+                this.showErrorAndReturn('Error al cargar datos');
+                return;
+            }
+
+            const shuffled = Phaser.Utils.Array.Shuffle([...source]);
+            this.items = shuffled.slice(0, 5);
+            this.correctOrder = [...this.items].sort((a, b) => a.posicion - b.posicion);
+
+            // Mezclar para mostrar
+            this.displayItems = Phaser.Utils.Array.Shuffle([...this.items]);
+
+            // Crear slots
+            this.slots = [];
+            this.cards = [];
+            this.selectedCard = null;
+
+            this.createSlots();
+            this.createCards();
+
+            // Botón confirmar
+            this.confirmBtn = this.createButton(400, 550, 'CONFIRMAR ORDEN', () => {
+                this.checkOrder();
+            });
+
+            // Instrucciones
+            this.add.text(400, 580, 'Arrastra o toca para intercambiar posiciones', {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '7px',
+                color: '#666666'
+            }).setOrigin(0.5);
+
+            this.cameras.main.fadeIn(500);
+        } catch (error) {
+            console.error('OrderingGameScene create error:', error);
+            this.showErrorAndReturn('Error en el minijuego');
+        }
+    }
+
+    showErrorAndReturn(message) {
+        this.add.rectangle(400, 300, 800, 600, 0x000000, 0.8);
+        this.add.text(400, 280, message, {
             fontFamily: '"Press Start 2P"',
-            fontSize: '16px',
-            color: '#ffd700'
+            fontSize: '12px',
+            color: '#e94560'
         }).setOrigin(0.5);
-
-        this.add.text(400, 55, '(de MAS a MENOS poblado)', {
+        this.add.text(400, 320, 'Volviendo al juego...', {
             fontFamily: '"Press Start 2P"',
-            fontSize: '9px',
-            color: '#4ecca3'
+            fontSize: '8px',
+            color: '#ffffff'
         }).setOrigin(0.5);
-
-        // Seleccionar 5 elementos aleatorios
-        const source = this.isCountries ? GAME_DATA.top20Paises : GAME_DATA.top20Ciudades;
-        const shuffled = Phaser.Utils.Array.Shuffle([...source]);
-        this.items = shuffled.slice(0, 5);
-        this.correctOrder = [...this.items].sort((a, b) => a.posicion - b.posicion);
-
-        // Mezclar para mostrar
-        this.displayItems = Phaser.Utils.Array.Shuffle([...this.items]);
-
-        // Crear slots
-        this.slots = [];
-        this.cards = [];
-        this.selectedCard = null;
-
-        this.createSlots();
-        this.createCards();
-
-        // Botón confirmar
-        this.confirmBtn = this.createButton(400, 550, 'CONFIRMAR ORDEN', () => {
-            this.checkOrder();
-        });
-
-        // Instrucciones
-        this.add.text(400, 580, 'Arrastra o toca para intercambiar posiciones', {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '7px',
-            color: '#666666'
-        }).setOrigin(0.5);
-
-        this.cameras.main.fadeIn(500);
+        this.time.delayedCall(2000, () => this.returnToGame());
     }
 
     createSlots() {
@@ -1941,7 +2078,7 @@ class OrderingGameScene extends Phaser.Scene {
         const bg = this.add.rectangle(0, 0, 400, 150, isFullyCorrect ? 0x4ecca3 : 0xe94560, 0.95);
         bg.setStrokeStyle(4, 0xffffff);
 
-        const title = this.add.text(0, -40, isFullyCorrect ? 'PERFECTO!' : `${correct}/5 CORRECTOS`, {
+        const title = this.add.text(0, -40, isFullyCorrect ? '¡PERFECTO!' : `${correct}/5 CORRECTOS`, {
             fontFamily: '"Press Start 2P"',
             fontSize: '18px',
             color: '#ffffff'
@@ -2038,83 +2175,129 @@ class MatchingGameScene extends Phaser.Scene {
     }
 
     create() {
-        const levelInfo = GAME_DATA.niveles[this.level - 1];
+        try {
+            const levelInfo = GAME_DATA.niveles[this.level - 1];
 
-        // Fondo
-        this.bg = this.add.image(400, 300, `bg_${levelInfo.escenario}`);
-        this.bg.setAlpha(0.5);
+            // Fondo
+            if (levelInfo && levelInfo.escenario) {
+                this.bg = this.add.image(400, 300, `bg_${levelInfo.escenario}`);
+                this.bg.setAlpha(0.5);
+            } else {
+                this.add.rectangle(400, 300, 800, 600, 0x1a1a2e);
+            }
 
-        // Título según tipo
-        let title = 'EMPAREJA CAPITALES';
-        let subtitle = 'Conecta cada pais con su capital';
+            // Título según tipo
+            let title = 'EMPAREJA CAPITALES';
+            let subtitle = 'Conecta cada país con su capital';
 
-        if (this.matchType === 'countries') {
-            title = 'EMPAREJA PAISES';
-            subtitle = 'Conecta cada pais con su continente';
-        } else if (this.matchType === 'cities') {
-            title = 'EMPAREJA CIUDADES';
-            subtitle = 'Conecta cada ciudad con su pais';
+            if (this.matchType === 'countries') {
+                title = 'EMPAREJA PAÍSES';
+                subtitle = 'Conecta cada país con su continente';
+            } else if (this.matchType === 'cities') {
+                title = 'EMPAREJA CIUDADES';
+                subtitle = 'Conecta cada ciudad con su país';
+            }
+
+            this.add.text(400, 25, title, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '16px',
+                color: '#ffd700'
+            }).setOrigin(0.5);
+
+            this.add.text(400, 50, subtitle, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '8px',
+                color: '#4ecca3'
+            }).setOrigin(0.5);
+
+            // Generar pares
+            this.generatePairs();
+
+            // Verificar que tenemos pares
+            if (!this.pairs || this.pairs.length === 0) {
+                console.error('MatchingGameScene: No se generaron pares');
+                this.showErrorAndReturn('Error al cargar el minijuego');
+                return;
+            }
+
+            // Estado del juego
+            this.selectedLeft = null;
+            this.selectedRight = null;
+            this.matchedPairs = 0;
+            this.totalPairs = this.pairs.length;
+            this.wrongAttempts = 0;
+
+            // Crear elementos
+            this.createMatchingElements();
+
+            // Gráficos para líneas
+            this.linesGraphics = this.add.graphics();
+
+            this.cameras.main.fadeIn(500);
+        } catch (error) {
+            console.error('MatchingGameScene create error:', error);
+            this.showErrorAndReturn('Error en el minijuego');
         }
+    }
 
-        this.add.text(400, 25, title, {
+    showErrorAndReturn(message) {
+        this.add.rectangle(400, 300, 800, 600, 0x000000, 0.8);
+        this.add.text(400, 280, message, {
             fontFamily: '"Press Start 2P"',
-            fontSize: '16px',
-            color: '#ffd700'
+            fontSize: '12px',
+            color: '#e94560'
         }).setOrigin(0.5);
-
-        this.add.text(400, 50, subtitle, {
+        this.add.text(400, 320, 'Volviendo al juego...', {
             fontFamily: '"Press Start 2P"',
             fontSize: '8px',
-            color: '#4ecca3'
+            color: '#ffffff'
         }).setOrigin(0.5);
-
-        // Generar pares
-        this.generatePairs();
-
-        // Estado del juego
-        this.selectedLeft = null;
-        this.selectedRight = null;
-        this.matchedPairs = 0;
-        this.totalPairs = 5;
-        this.wrongAttempts = 0;
-
-        // Crear elementos
-        this.createMatchingElements();
-
-        // Gráficos para líneas
-        this.linesGraphics = this.add.graphics();
-
-        this.cameras.main.fadeIn(500);
+        this.time.delayedCall(2000, () => this.returnToGame());
     }
 
     generatePairs() {
         this.pairs = [];
 
-        if (this.matchType === 'capitals') {
-            const caps = Phaser.Utils.Array.Shuffle([...GAME_DATA.capitalesEuropa]).slice(0, 5);
-            caps.forEach(c => {
-                const country = c.pregunta.replace('Cual es la capital de ', '').replace('?', '');
-                this.pairs.push({
-                    left: country,
-                    right: c.respuesta
+        try {
+            if (this.matchType === 'capitals') {
+                const caps = Phaser.Utils.Array.Shuffle([...GAME_DATA.capitalesEuropa]).slice(0, 5);
+                caps.forEach(c => {
+                    // Extraer nombre del país de la pregunta (manejar diferentes formatos)
+                    let country = c.pregunta
+                        .replace('¿Cuál es la capital de ', '')
+                        .replace('Cual es la capital de ', '')
+                        .replace('?', '')
+                        .trim();
+                    this.pairs.push({
+                        left: country,
+                        right: c.respuesta
+                    });
                 });
-            });
-        } else if (this.matchType === 'countries') {
-            const countries = Phaser.Utils.Array.Shuffle([...GAME_DATA.top20Paises]).slice(0, 5);
-            countries.forEach(c => {
-                this.pairs.push({
-                    left: c.nombre,
-                    right: c.continente
+            } else if (this.matchType === 'countries') {
+                const countries = Phaser.Utils.Array.Shuffle([...GAME_DATA.top20Paises]).slice(0, 5);
+                countries.forEach(c => {
+                    this.pairs.push({
+                        left: c.nombre,
+                        right: c.continente
+                    });
                 });
-            });
-        } else if (this.matchType === 'cities') {
-            const cities = Phaser.Utils.Array.Shuffle([...GAME_DATA.top20Ciudades]).slice(0, 5);
-            cities.forEach(c => {
-                this.pairs.push({
-                    left: c.nombre,
-                    right: c.pais
+            } else if (this.matchType === 'cities') {
+                const cities = Phaser.Utils.Array.Shuffle([...GAME_DATA.top20Ciudades]).slice(0, 5);
+                cities.forEach(c => {
+                    this.pairs.push({
+                        left: c.nombre,
+                        right: c.pais
+                    });
                 });
-            });
+            }
+
+            // Verificar que se generaron pares
+            if (this.pairs.length === 0) {
+                console.error('MatchingGameScene: No se pudieron generar pares');
+            }
+        } catch (error) {
+            console.error('MatchingGameScene generatePairs error:', error);
+            this.pairs = [];
         }
     }
 
@@ -2264,7 +2447,7 @@ class MatchingGameScene extends Phaser.Scene {
         const bg = this.add.rectangle(0, 0, 400, 150, bgColor, 0.95);
         bg.setStrokeStyle(4, 0xffffff);
 
-        const title = this.add.text(0, -30, success ? 'COMPLETADO!' : 'DEMASIADOS ERRORES', {
+        const title = this.add.text(0, -30, success ? '¡COMPLETADO!' : 'DEMASIADOS ERRORES', {
             fontFamily: '"Press Start 2P"',
             fontSize: '14px',
             color: '#ffffff'
@@ -2287,6 +2470,363 @@ class MatchingGameScene extends Phaser.Scene {
         });
 
         this.time.delayedCall(2000, () => {
+            this.returnToGame();
+        });
+    }
+
+    returnToGame() {
+        this.cameras.main.fadeOut(500);
+        this.time.delayedCall(500, () => {
+            this.scene.start('GameScene', {
+                level: this.level,
+                totalCorrect: this.totalCorrect,
+                score: this.score,
+                lives: this.lives,
+                powerups: this.powerups,
+                fromMinigame: true,
+                minigamePlayed: true,
+                currentQuestion: 5,
+                correctAnswers: this.correctAnswers,
+                maxCombo: this.maxCombo
+            });
+        });
+    }
+}
+
+// ==================== MINIJUEGO: MAPA INTERACTIVO ====================
+class MapGameScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'MapGameScene' });
+    }
+
+    init(data) {
+        this.level = data.level || 2;
+        this.totalCorrect = data.totalCorrect || 0;
+        this.score = data.score || 0;
+        this.lives = data.lives !== undefined ? data.lives : 3;
+        this.powerups = data.powerups || { fifty: 1, hint: 1, freeze: 1 };
+        this.correctAnswers = data.correctAnswers || 0;
+        this.maxCombo = data.maxCombo || 0;
+        this.mapType = data.mapType || 'europe'; // 'europe' o 'world'
+        this.isCapitals = data.isCapitals !== false; // true para capitales, false para países
+    }
+
+    create() {
+        try {
+            // Fondo según el tipo de mapa
+            if (this.mapType === 'europe') {
+                this.add.rectangle(400, 300, 800, 600, 0x0a2a4a);
+                this.map = this.add.image(400, 320, 'map_europe_large');
+                this.locations = SpriteGenerator.europeCountries ? { ...SpriteGenerator.europeCountries } : {};
+                this.mapScale = 1.0;
+            } else {
+                this.add.rectangle(400, 300, 800, 600, 0x0a3a5a);
+                this.map = this.add.image(400, 320, 'map_world_large');
+                this.locations = SpriteGenerator.worldLocations ? { ...SpriteGenerator.worldLocations } : {};
+                this.mapScale = 1.0;
+            }
+
+            // Verificar que tenemos ubicaciones
+            if (Object.keys(this.locations).length === 0) {
+                console.error('MapGameScene: No se encontraron ubicaciones para el mapa');
+                this.showErrorAndReturn('Error al cargar el mapa');
+                return;
+            }
+
+            // Ajustar posición del mapa
+            this.mapOffsetX = 50;
+            this.mapOffsetY = 70;
+
+            // Título
+            const titleText = this.mapType === 'europe' ?
+                (this.isCapitals ? '¿DÓNDE ESTÁ LA CAPITAL?' : '¿DÓNDE ESTÁ EL PAÍS?') :
+                '¿DÓNDE ESTÁ EN EL MUNDO?';
+
+            this.add.text(400, 25, titleText, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '14px',
+                color: '#ffd700'
+            }).setOrigin(0.5);
+
+            // Preparar preguntas
+            this.prepareQuestions();
+
+            // Verificar que tenemos preguntas
+            if (!this.questions || this.questions.length === 0) {
+                console.error('MapGameScene: No se pudieron generar preguntas');
+                this.showErrorAndReturn('Error al cargar preguntas');
+                return;
+            }
+
+            // Variables del juego
+            this.currentQuestion = 0;
+            this.totalQuestions = Math.min(5, this.questions.length);
+            this.correctInRound = 0;
+            this.hintShown = false;
+
+            // UI
+            this.createUI();
+
+            // Mostrar primera pregunta
+            this.showQuestion();
+
+            // Input del mapa
+            this.map.setInteractive();
+            this.map.on('pointerdown', (pointer) => this.handleMapClick(pointer));
+
+            // Marcador para mostrar dónde se hizo clic
+            this.clickMarker = this.add.circle(0, 0, 8, 0xffd700);
+            this.clickMarker.setVisible(false);
+
+            // Marcador de posición correcta
+            this.correctMarker = this.add.circle(0, 0, 12, 0x4ecca3);
+            this.correctMarker.setStrokeStyle(3, 0xffffff);
+            this.correctMarker.setVisible(false);
+
+            this.cameras.main.fadeIn(500);
+        } catch (error) {
+            console.error('MapGameScene error:', error);
+            this.showErrorAndReturn('Error en el minijuego');
+        }
+    }
+
+    showErrorAndReturn(message) {
+        this.add.rectangle(400, 300, 800, 600, 0x000000, 0.8);
+        this.add.text(400, 280, message, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '12px',
+            color: '#e94560'
+        }).setOrigin(0.5);
+        this.add.text(400, 320, 'Volviendo al juego...', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '8px',
+            color: '#ffffff'
+        }).setOrigin(0.5);
+        this.time.delayedCall(2000, () => this.returnToGame());
+    }
+
+    prepareQuestions() {
+        // Convertir ubicaciones a array y mezclar
+        const locationArray = Object.entries(this.locations).map(([name, data]) => ({
+            name: name,
+            ...data
+        }));
+
+        // Mezclar y tomar 5
+        Phaser.Utils.Array.Shuffle(locationArray);
+        this.questions = locationArray.slice(0, 5);
+    }
+
+    createUI() {
+        // Panel de pregunta
+        this.questionPanel = this.add.container(400, 560);
+
+        const panelBg = this.add.graphics();
+        panelBg.fillStyle(0x1a1a2e, 0.95);
+        panelBg.fillRoundedRect(-350, -35, 700, 70, 10);
+        panelBg.lineStyle(3, 0xe94560);
+        panelBg.strokeRoundedRect(-350, -35, 700, 70, 10);
+
+        this.questionText = this.add.text(0, -10, '', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '12px',
+            color: '#ffffff'
+        }).setOrigin(0.5);
+
+        this.hintText = this.add.text(0, 15, 'Haz clic en el mapa', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '8px',
+            color: '#4ecca3'
+        }).setOrigin(0.5);
+
+        this.questionPanel.add([panelBg, this.questionText, this.hintText]);
+
+        // Contador de preguntas
+        this.progressText = this.add.text(700, 25, '1/5', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '12px',
+            color: '#4ecca3'
+        }).setOrigin(0.5);
+
+        // Puntuación
+        this.scoreText = this.add.text(100, 25, `${this.score}`, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '12px',
+            color: '#ffd700'
+        }).setOrigin(0.5);
+    }
+
+    showQuestion() {
+        if (this.currentQuestion >= this.totalQuestions) {
+            this.endMinigame();
+            return;
+        }
+
+        const q = this.questions[this.currentQuestion];
+
+        let questionStr;
+        if (this.isCapitals && q.capital) {
+            questionStr = `¿Dónde está ${q.capital}?`;
+        } else {
+            questionStr = `¿Dónde está ${q.name}?`;
+        }
+
+        this.questionText.setText(questionStr);
+        this.hintText.setText('Haz clic en el mapa');
+        this.progressText.setText(`${this.currentQuestion + 1}/${this.totalQuestions}`);
+
+        this.clickMarker.setVisible(false);
+        this.correctMarker.setVisible(false);
+        this.hintShown = false;
+        this.canClick = true;
+    }
+
+    handleMapClick(pointer) {
+        if (!this.canClick) return;
+        this.canClick = false;
+
+        const q = this.questions[this.currentQuestion];
+
+        // Calcular posición relativa al mapa
+        const mapBounds = this.map.getBounds();
+        const clickX = pointer.x - mapBounds.left;
+        const clickY = pointer.y - mapBounds.top;
+
+        // Posición correcta (escalada al tamaño del mapa)
+        const correctX = q.x * (mapBounds.width / 700) + mapBounds.left;
+        const correctY = q.y * (mapBounds.height / 500) + mapBounds.top;
+
+        // Mostrar marcador de clic
+        this.clickMarker.setPosition(pointer.x, pointer.y);
+        this.clickMarker.setVisible(true);
+
+        // Calcular distancia
+        const distance = Phaser.Math.Distance.Between(pointer.x, pointer.y, correctX, correctY);
+
+        // Determinar puntuación basada en distancia
+        let points = 0;
+        let message = '';
+        let messageColor = '#e94560';
+
+        if (distance < 30) {
+            points = 100;
+            message = '¡PERFECTO!';
+            messageColor = '#4ecca3';
+            this.correctInRound++;
+            audioManager.playCorrect();
+        } else if (distance < 60) {
+            points = 75;
+            message = '¡MUY CERCA!';
+            messageColor = '#4ecca3';
+            this.correctInRound++;
+            audioManager.playCorrect();
+        } else if (distance < 100) {
+            points = 50;
+            message = '¡CERCA!';
+            messageColor = '#ffd700';
+            audioManager.playClick();
+        } else if (distance < 150) {
+            points = 25;
+            message = 'Un poco lejos...';
+            messageColor = '#ff9900';
+            audioManager.playClick();
+        } else {
+            points = 0;
+            message = '¡Fallaste!';
+            messageColor = '#e94560';
+            this.lives--;
+            audioManager.playWrong();
+        }
+
+        // Mostrar posición correcta
+        this.correctMarker.setPosition(correctX, correctY);
+        this.correctMarker.setVisible(true);
+
+        // Línea desde clic hasta posición correcta
+        if (distance > 30) {
+            const line = this.add.graphics();
+            line.lineStyle(2, 0xffffff, 0.5);
+            line.lineBetween(pointer.x, pointer.y, correctX, correctY);
+            this.time.delayedCall(1500, () => line.destroy());
+        }
+
+        // Actualizar puntuación
+        this.score += points;
+        this.scoreText.setText(`${this.score}`);
+
+        // Mostrar feedback
+        this.hintText.setText(message);
+        this.hintText.setColor(messageColor);
+
+        // Efecto visual
+        if (points >= 75) {
+            this.tweens.add({
+                targets: this.clickMarker,
+                scale: 1.5,
+                alpha: 0,
+                duration: 500
+            });
+        }
+
+        // Siguiente pregunta
+        this.time.delayedCall(1500, () => {
+            this.currentQuestion++;
+            this.showQuestion();
+        });
+    }
+
+    endMinigame() {
+        // Calcular resultado
+        const success = this.correctInRound >= 3;
+        const bonusPoints = this.correctInRound * 30;
+        this.score += bonusPoints;
+
+        if (success) {
+            this.totalCorrect++;
+        }
+
+        // Mostrar resultado
+        const feedback = this.add.container(400, 300);
+
+        const bgColor = success ? 0x4ecca3 : 0xe94560;
+        const bg = this.add.rectangle(0, 0, 400, 180, bgColor, 0.95);
+        bg.setStrokeStyle(4, 0xffffff);
+
+        const title = this.add.text(0, -50, success ? '¡BIEN HECHO!' : 'NECESITAS PRACTICAR', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '14px',
+            color: '#ffffff'
+        }).setOrigin(0.5);
+
+        const stats = this.add.text(0, 0, `Aciertos cercanos: ${this.correctInRound}/5`, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '10px',
+            color: '#ffffff'
+        }).setOrigin(0.5);
+
+        const points = this.add.text(0, 35, `+${bonusPoints} puntos bonus`, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '10px',
+            color: '#ffd700'
+        }).setOrigin(0.5);
+
+        feedback.add([bg, title, stats, points]);
+        feedback.setScale(0);
+
+        this.tweens.add({
+            targets: feedback,
+            scale: 1,
+            duration: 300,
+            ease: 'Back.easeOut'
+        });
+
+        if (success) {
+            audioManager.playCorrect();
+        } else {
+            audioManager.playWrong();
+        }
+
+        this.time.delayedCall(2500, () => {
             this.returnToGame();
         });
     }
