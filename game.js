@@ -62,7 +62,7 @@ class BootScene extends Phaser.Scene {
     create() {
         this.time.delayedCall(800, () => {
             document.getElementById('loading-screen').classList.add('hidden');
-            this.scene.start('IntroScene');
+            this.scene.start('CinematicIntroScene');
         });
     }
 }

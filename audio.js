@@ -207,6 +207,67 @@ class AudioManager {
         this.playNote(freq, 0.03, 'square', this.sfxGain, 0, 0.1);
     }
 
+    // Sonido de explosion (para fuegos artificiales)
+    playExplosion() {
+        if (!this.context) this.init();
+        // Ruido de explosion
+        for (let i = 0; i < 10; i++) {
+            const freq = 100 + Math.random() * 200;
+            this.playNote(freq, 0.05, 'sawtooth', this.sfxGain, i * 0.02, 0.15 - i * 0.01);
+        }
+        // Chisporroteo
+        for (let i = 0; i < 20; i++) {
+            const freq = 1000 + Math.random() * 3000;
+            this.playNote(freq, 0.02, 'square', this.sfxGain, 0.1 + i * 0.03, 0.05);
+        }
+    }
+
+    // Sonido de logro desbloqueado
+    playAchievement() {
+        if (!this.context) this.init();
+        const melody = [523, 659, 784, 1047, 784, 1047, 1319];
+        melody.forEach((note, i) => {
+            this.playNote(note, 0.15, 'square', this.sfxGain, i * 0.1, 0.3);
+            this.playNote(note / 2, 0.15, 'triangle', this.sfxGain, i * 0.1, 0.2);
+        });
+    }
+
+    // Sonido dramatico (para cinematicas)
+    playDramatic() {
+        if (!this.context) this.init();
+        this.playNote(110, 0.5, 'sawtooth', this.sfxGain, 0, 0.3);
+        this.playNote(165, 0.5, 'sawtooth', this.sfxGain, 0.2, 0.25);
+        this.playNote(220, 0.5, 'sawtooth', this.sfxGain, 0.4, 0.2);
+    }
+
+    // Sonido de trueno
+    playThunder() {
+        if (!this.context) this.init();
+        // Crack inicial
+        this.playNote(100, 0.1, 'sawtooth', this.sfxGain, 0, 0.5);
+        // Retumbar
+        for (let i = 0; i < 15; i++) {
+            const freq = 50 + Math.random() * 80;
+            this.playNote(freq, 0.15, 'sawtooth', this.sfxGain, 0.1 + i * 0.08, 0.3 - i * 0.02);
+        }
+    }
+
+    // Sonido de whoosh (transiciones)
+    playWhoosh() {
+        if (!this.context) this.init();
+        for (let i = 0; i < 10; i++) {
+            const freq = 200 + i * 100;
+            this.playNote(freq, 0.05, 'sine', this.sfxGain, i * 0.02, 0.1);
+        }
+    }
+
+    // Sonido de flashcard flip
+    playFlip() {
+        if (!this.context) this.init();
+        this.playNote(400, 0.05, 'square', this.sfxGain, 0, 0.15);
+        this.playNote(600, 0.05, 'square', this.sfxGain, 0.05, 0.15);
+    }
+
     // ==================== MÚSICA ====================
 
     stopMusic() {

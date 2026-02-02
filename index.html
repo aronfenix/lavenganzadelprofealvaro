@@ -156,8 +156,11 @@
     <script src="firebase-config.js"></script>
     <script src="sprites.js"></script>
     <script src="audio.js"></script>
+    <script src="effects.js"></script>
+    <script src="achievements.js"></script>
     <script src="game.js"></script>
     <script src="scenes.js"></script>
+    <script src="scenes-enhanced.js"></script>
 
     <!-- Inicialización -->
     <script>
@@ -169,7 +172,21 @@
             parent: 'game-container',
             backgroundColor: '#0a0a15',
             pixelArt: true,
-            scene: [BootScene, IntroScene, MenuScene, LevelIntroScene, GameScene, LevelResultScene, FinalScene, LeaderboardScene, OrderingGameScene, MatchingGameScene],
+            scene: [
+                BootScene,
+                CinematicIntroScene,
+                EnhancedMenuScene,
+                StudyModeScene,
+                FlashcardScene,
+                AchievementsScene,
+                LevelIntroScene,
+                GameScene,
+                LevelResultScene,
+                FinalScene,
+                LeaderboardScene,
+                OrderingGameScene,
+                MatchingGameScene
+            ],
             scale: {
                 mode: Phaser.Scale.FIT,
                 autoCenter: Phaser.Scale.CENTER_BOTH
