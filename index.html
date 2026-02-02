@@ -147,8 +147,13 @@
 
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 
+    <!-- Firebase SDK (opcional, para leaderboard compartido) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
     <!-- Módulos del juego -->
     <script src="data.js"></script>
+    <script src="firebase-config.js"></script>
     <script src="sprites.js"></script>
     <script src="audio.js"></script>
     <script src="game.js"></script>
@@ -164,7 +169,7 @@
             parent: 'game-container',
             backgroundColor: '#0a0a15',
             pixelArt: true,
-            scene: [BootScene, IntroScene, MenuScene, LevelIntroScene, GameScene, LevelResultScene, FinalScene, LeaderboardScene],
+            scene: [BootScene, IntroScene, MenuScene, LevelIntroScene, GameScene, LevelResultScene, FinalScene, LeaderboardScene, OrderingGameScene, MatchingGameScene],
             scale: {
                 mode: Phaser.Scale.FIT,
                 autoCenter: Phaser.Scale.CENTER_BOTH

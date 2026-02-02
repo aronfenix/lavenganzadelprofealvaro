@@ -10,19 +10,21 @@ class GameScene extends Phaser.Scene {
 
     init(data) {
         this.level = data.level || 1;
-        this.currentQuestion = 0;
-        this.correctAnswers = 0;
+        this.currentQuestion = data.currentQuestion || 0;
+        this.correctAnswers = data.correctAnswers || 0;
         this.totalCorrect = data.totalCorrect || 0;
         this.score = data.score || 0;
         this.lives = data.lives !== undefined ? data.lives : 3;
         this.powerups = data.powerups || { fifty: 1, hint: 1, freeze: 1 };
         this.combo = 0;
-        this.maxCombo = 0;
+        this.maxCombo = data.maxCombo || 0;
         this.timeLeft = 25;
         this.timerPaused = false;
         this.canAnswer = true;
-        this.questions = [];
+        this.questions = data.questions || [];
         this.currentInput = '';
+        this.fromMinigame = data.fromMinigame || false;
+        this.minigamePlayed = data.minigamePlayed || false;
     }
 
     create() {
@@ -32,8 +34,10 @@ class GameScene extends Phaser.Scene {
         this.bg = this.add.image(400, 300, `bg_${levelInfo.escenario}`);
         this.bg.setAlpha(0.6);
 
-        // Cargar preguntas
-        this.loadQuestions();
+        // Cargar preguntas (solo si no venimos de un minijuego)
+        if (!this.fromMinigame || this.questions.length === 0) {
+            this.loadQuestions();
+        }
 
         // Crear UI
         this.createUI();
@@ -813,8 +817,64 @@ class GameScene extends Phaser.Scene {
 
             if (this.currentQuestion >= 10) {
                 this.endLevel();
+            } else if (this.currentQuestion === 5 && !this.minigamePlayed && this.level > 1) {
+                // Lanzar minijuego a mitad del nivel (solo en niveles 2, 3 y 4)
+                this.launchMinigame();
             } else {
                 this.showQuestion();
+            }
+        });
+    }
+
+    launchMinigame() {
+        if (this.timerEvent) this.timerEvent.destroy();
+        audioManager.stopMusic();
+
+        this.cameras.main.fadeOut(500);
+        this.time.delayedCall(500, () => {
+            // Decidir tipo de minijuego según nivel
+            if (this.level === 2) {
+                // Nivel 2: Ordenar países por población
+                this.scene.start('OrderingGameScene', {
+                    level: this.level,
+                    totalCorrect: this.totalCorrect,
+                    score: this.score,
+                    lives: this.lives,
+                    powerups: this.powerups,
+                    isCountries: true
+                });
+            } else if (this.level === 3) {
+                // Nivel 3: Emparejar ciudades con países
+                this.scene.start('MatchingGameScene', {
+                    level: this.level,
+                    totalCorrect: this.totalCorrect,
+                    score: this.score,
+                    lives: this.lives,
+                    powerups: this.powerups,
+                    matchType: 'cities'
+                });
+            } else if (this.level === 4) {
+                // Nivel 4: Alternar entre ordenar ciudades y emparejar capitales
+                const random = Math.random();
+                if (random < 0.5) {
+                    this.scene.start('OrderingGameScene', {
+                        level: this.level,
+                        totalCorrect: this.totalCorrect,
+                        score: this.score,
+                        lives: this.lives,
+                        powerups: this.powerups,
+                        isCountries: false // ciudades
+                    });
+                } else {
+                    this.scene.start('MatchingGameScene', {
+                        level: this.level,
+                        totalCorrect: this.totalCorrect,
+                        score: this.score,
+                        lives: this.lives,
+                        powerups: this.powerups,
+                        matchType: 'capitals'
+                    });
+                }
             }
         });
     }
@@ -1207,18 +1267,18 @@ class FinalScene extends Phaser.Scene {
         // Guardar puntuación
         this.saveScore();
 
-        // Botones
-        this.createButton(200, 500, 'MENÚ', () => {
+        // Botones (posicionados más arriba para dejar espacio al teclado)
+        this.createButton(200, 480, 'MENU', () => {
             audioManager.playClick();
             this.scene.start('MenuScene');
         });
 
-        this.createButton(400, 500, 'RANKING', () => {
+        this.createButton(400, 480, 'RANKING', () => {
             audioManager.playClick();
             this.scene.start('LeaderboardScene');
         });
 
-        this.createButton(600, 500, 'REINTENTAR', () => {
+        this.createButton(600, 480, 'REINTENTAR', () => {
             audioManager.playClick();
             this.scene.start('LevelIntroScene', { level: 1 });
         });
@@ -1239,45 +1299,48 @@ class FinalScene extends Phaser.Scene {
     }
 
     showNameInput() {
-        this.add.text(400, 545, 'Introduce tu nombre para el ranking:', {
+        this.add.text(400, 535, 'Introduce tu nombre:', {
             fontFamily: '"Press Start 2P"',
-            fontSize: '7px',
-            color: '#666666'
+            fontSize: '8px',
+            color: '#4ecca3'
         }).setOrigin(0.5);
 
         // Input visual
         this.nameInput = '';
-        this.nameContainer = this.add.container(400, 575);
+        this.nameContainer = this.add.container(400, 560);
 
         const inputBg = this.add.graphics();
         inputBg.fillStyle(0x1a1a2e, 1);
-        inputBg.fillRoundedRect(-100, -15, 140, 30, 5);
+        inputBg.fillRoundedRect(-150, -15, 240, 30, 5);
         inputBg.lineStyle(2, 0x4ecca3);
-        inputBg.strokeRoundedRect(-100, -15, 140, 30, 5);
+        inputBg.strokeRoundedRect(-150, -15, 240, 30, 5);
 
-        this.nameDisplay = this.add.text(-90, 0, '_', {
+        this.nameDisplay = this.add.text(0, 0, '_', {
             fontFamily: '"Press Start 2P"',
-            fontSize: '10px',
+            fontSize: '12px',
             color: '#4ecca3'
-        }).setOrigin(0, 0.5);
+        }).setOrigin(0.5);
 
         // Botón guardar
-        const saveBtn = this.add.container(80, 0);
-        const saveBg = this.add.rectangle(0, 0, 60, 28, 0x4ecca3);
-        const saveText = this.add.text(0, 0, 'OK', {
+        const saveBtn = this.add.container(150, 0);
+        const saveBg = this.add.rectangle(0, 0, 70, 28, 0x4ecca3);
+        const saveText = this.add.text(0, 0, 'GUARDAR', {
             fontFamily: '"Press Start 2P"',
-            fontSize: '10px',
+            fontSize: '7px',
             color: '#0a0a15'
         }).setOrigin(0.5);
 
         saveBtn.add([saveBg, saveText]);
-        saveBtn.setSize(60, 28);
+        saveBtn.setSize(70, 28);
         saveBtn.setInteractive();
         saveBtn.on('pointerdown', () => this.saveName());
 
         this.nameContainer.add([inputBg, this.nameDisplay, saveBtn]);
 
-        // Keyboard input
+        // Teclado virtual para tablets
+        this.createNameKeyboard();
+
+        // Keyboard input para PC
         this.input.keyboard.on('keydown', (event) => {
             if (event.key === 'Enter') {
                 this.saveName();
@@ -1291,27 +1354,102 @@ class FinalScene extends Phaser.Scene {
         });
     }
 
-    saveName() {
-        if (this.nameInput.length === 0) this.nameInput = 'ANÓNIMO';
+    createNameKeyboard() {
+        this.keyboard = this.add.container(400, 640);
 
-        const scores = JSON.parse(localStorage.getItem('profesorAlvaroLeaderboard') || '[]');
+        const keys = 'QWERTYUIOPASDFGHJKLZXCVBNM';
+        const rows = [
+            keys.slice(0, 10),
+            keys.slice(10, 19),
+            keys.slice(19, 26)
+        ];
 
-        scores.push({
+        rows.forEach((row, rowIndex) => {
+            const startX = -((row.length - 1) * 35) / 2;
+
+            for (let i = 0; i < row.length; i++) {
+                const key = row[i];
+                const x = startX + i * 35;
+                const y = rowIndex * 38 - 38;
+
+                const keyBtn = this.add.container(x, y);
+                const keyBg = this.add.rectangle(0, 0, 32, 32, 0x1a1a2e);
+                keyBg.setStrokeStyle(2, 0x4ecca3);
+                const keyText = this.add.text(0, 0, key, {
+                    fontFamily: '"Press Start 2P"',
+                    fontSize: '10px',
+                    color: '#4ecca3'
+                }).setOrigin(0.5);
+
+                keyBtn.add([keyBg, keyText]);
+                keyBtn.setSize(32, 32);
+                keyBtn.setInteractive();
+
+                keyBtn.on('pointerdown', () => {
+                    if (this.nameInput.length < 10) {
+                        this.nameInput += key;
+                        this.nameDisplay.setText(this.nameInput + '_');
+                        audioManager.playClick();
+                    }
+                });
+
+                this.keyboard.add(keyBtn);
+            }
+        });
+
+        // Botón borrar
+        const delBtn = this.add.container(160, 38);
+        const delBg = this.add.rectangle(0, 0, 60, 32, 0x1a1a2e);
+        delBg.setStrokeStyle(2, 0xe94560);
+        const delText = this.add.text(0, 0, 'DEL', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '9px',
+            color: '#e94560'
+        }).setOrigin(0.5);
+
+        delBtn.add([delBg, delText]);
+        delBtn.setSize(60, 32);
+        delBtn.setInteractive();
+        delBtn.on('pointerdown', () => {
+            this.nameInput = this.nameInput.slice(0, -1);
+            this.nameDisplay.setText(this.nameInput + '_');
+            audioManager.playClick();
+        });
+
+        this.keyboard.add(delBtn);
+    }
+
+    async saveName() {
+        if (this.nameInput.length === 0) this.nameInput = 'ANONIMO';
+
+        const entry = {
             name: this.nameInput,
             score: this.score,
             level: this.level,
             correct: this.totalCorrect,
             date: new Date().toISOString(),
             victory: this.victory
-        });
+        };
 
-        scores.sort((a, b) => b.score - a.score);
-        localStorage.setItem('profesorAlvaroLeaderboard', JSON.stringify(scores.slice(0, 50)));
+        // Guardar usando el manager (Firebase + localStorage)
+        try {
+            if (window.leaderboardManager) {
+                await leaderboardManager.saveScore(entry);
+            } else {
+                // Fallback a localStorage
+                const scores = JSON.parse(localStorage.getItem('profesorAlvaroLeaderboard') || '[]');
+                scores.push(entry);
+                scores.sort((a, b) => b.score - a.score);
+                localStorage.setItem('profesorAlvaroLeaderboard', JSON.stringify(scores.slice(0, 50)));
+            }
+        } catch (e) {
+            console.log('Error guardando:', e);
+        }
 
         // Feedback visual
         if (this.nameContainer) {
             this.nameContainer.destroy();
-            this.add.text(400, 575, '¡Puntuación guardada!', {
+            this.add.text(400, 575, 'Puntuacion guardada!', {
                 fontFamily: '"Press Start 2P"',
                 fontSize: '8px',
                 color: '#4ecca3'
@@ -1321,7 +1459,6 @@ class FinalScene extends Phaser.Scene {
 
     saveScore() {
         // Auto-save sin nombre por si no lo introducen
-        const scores = JSON.parse(localStorage.getItem('profesorAlvaroLeaderboard') || '[]');
         // No guardamos aquí, solo al introducir nombre
     }
 
@@ -1390,88 +1527,122 @@ class LeaderboardScene extends Phaser.Scene {
         super({ key: 'LeaderboardScene' });
     }
 
-    create() {
+    async create() {
         this.add.rectangle(400, 300, 800, 600, 0x0a0a15);
 
         // Título
-        this.add.text(400, 40, '🏆 RANKING 🏆', {
+        this.add.text(400, 40, 'RANKING GLOBAL', {
             fontFamily: '"Press Start 2P"',
-            fontSize: '24px',
+            fontSize: '22px',
             color: '#ffd700'
         }).setOrigin(0.5);
 
-        // Cargar puntuaciones
-        const scores = JSON.parse(localStorage.getItem('profesorAlvaroLeaderboard') || '[]');
+        // Indicador de carga
+        this.loadingText = this.add.text(400, 300, 'Cargando...', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '12px',
+            color: '#4ecca3'
+        }).setOrigin(0.5);
 
-        if (scores.length === 0) {
-            this.add.text(400, 300, 'No hay puntuaciones todavía.\n¡Sé el primero en jugar!', {
-                fontFamily: '"Press Start 2P"',
-                fontSize: '10px',
-                color: '#666666',
-                align: 'center'
-            }).setOrigin(0.5);
-        } else {
-            // Cabecera
-            this.add.text(60, 90, '#', { fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#4ecca3' });
-            this.add.text(100, 90, 'NOMBRE', { fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#4ecca3' });
-            this.add.text(350, 90, 'PUNTOS', { fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#4ecca3' });
-            this.add.text(500, 90, 'NIVEL', { fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#4ecca3' });
-            this.add.text(620, 90, 'ACIERTOS', { fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#4ecca3' });
-
-            // Línea separadora
-            this.add.rectangle(400, 110, 720, 2, 0x4ecca3);
-
-            // Mostrar top 15
-            const displayScores = scores.slice(0, 15);
-            displayScores.forEach((entry, index) => {
-                const y = 130 + index * 28;
-
-                // Medallas para top 3
-                let rankText = `${index + 1}`;
-                let rankColor = '#ffffff';
-                if (index === 0) { rankText = '🥇'; rankColor = '#ffd700'; }
-                else if (index === 1) { rankText = '🥈'; rankColor = '#c0c0c0'; }
-                else if (index === 2) { rankText = '🥉'; rankColor = '#cd7f32'; }
-
-                this.add.text(60, y, rankText, {
-                    fontFamily: '"Press Start 2P"',
-                    fontSize: '10px',
-                    color: rankColor
-                });
-
-                this.add.text(100, y, entry.name.substring(0, 10), {
-                    fontFamily: '"Press Start 2P"',
-                    fontSize: '10px',
-                    color: entry.victory ? '#4ecca3' : '#ffffff'
-                });
-
-                this.add.text(350, y, `${entry.score}`, {
-                    fontFamily: '"Press Start 2P"',
-                    fontSize: '10px',
-                    color: '#ffd700'
-                });
-
-                this.add.text(500, y, `${entry.level}/4`, {
-                    fontFamily: '"Press Start 2P"',
-                    fontSize: '10px',
-                    color: '#ffffff'
-                });
-
-                this.add.text(620, y, `${entry.correct}`, {
-                    fontFamily: '"Press Start 2P"',
-                    fontSize: '10px',
-                    color: '#ffffff'
-                });
-            });
+        // Cargar puntuaciones (Firebase o localStorage)
+        let scores = [];
+        try {
+            if (window.leaderboardManager) {
+                scores = await leaderboardManager.getScores(50);
+            } else {
+                scores = JSON.parse(localStorage.getItem('profesorAlvaroLeaderboard') || '[]');
+            }
+        } catch (e) {
+            scores = JSON.parse(localStorage.getItem('profesorAlvaroLeaderboard') || '[]');
         }
 
+        this.loadingText.destroy();
+        this.displayLeaderboard(scores);
+
         // Botón volver
-        this.createButton(400, 560, 'VOLVER AL MENÚ', () => {
+        this.createButton(400, 560, 'VOLVER AL MENU', () => {
             audioManager.playClick();
             this.scene.start('MenuScene');
         });
 
         this.cameras.main.fadeIn(500);
+    }
+
+    displayLeaderboard(scores) {
+        if (scores.length === 0) {
+            this.add.text(400, 300, 'No hay puntuaciones todavia.\nSe el primero en jugar!', {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '10px',
+                color: '#666666',
+                align: 'center'
+            }).setOrigin(0.5);
+            return;
+        }
+
+        // Cabecera
+        this.add.text(50, 85, '#', { fontFamily: '"Press Start 2P"', fontSize: '9px', color: '#4ecca3' });
+        this.add.text(90, 85, 'NOMBRE', { fontFamily: '"Press Start 2P"', fontSize: '9px', color: '#4ecca3' });
+        this.add.text(320, 85, 'PUNTOS', { fontFamily: '"Press Start 2P"', fontSize: '9px', color: '#4ecca3' });
+        this.add.text(450, 85, 'NIVEL', { fontFamily: '"Press Start 2P"', fontSize: '9px', color: '#4ecca3' });
+        this.add.text(550, 85, 'FECHA', { fontFamily: '"Press Start 2P"', fontSize: '9px', color: '#4ecca3' });
+
+        // Línea separadora
+        this.add.rectangle(400, 105, 720, 2, 0x4ecca3);
+
+        // Mostrar top 15
+        const displayScores = scores.slice(0, 15);
+        displayScores.forEach((entry, index) => {
+            const y = 125 + index * 28;
+
+            // Medallas para top 3
+            let rankText = `${index + 1}`;
+            let rankColor = '#ffffff';
+            if (index === 0) { rankText = '1'; rankColor = '#ffd700'; }
+            else if (index === 1) { rankText = '2'; rankColor = '#c0c0c0'; }
+            else if (index === 2) { rankText = '3'; rankColor = '#cd7f32'; }
+
+            // Medalla visual para top 3
+            if (index < 3) {
+                const medalColors = [0xffd700, 0xc0c0c0, 0xcd7f32];
+                this.add.circle(35, y + 5, 12, medalColors[index]);
+            }
+
+            this.add.text(50, y, rankText, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '10px',
+                color: rankColor
+            });
+
+            this.add.text(90, y, (entry.name || 'ANONIMO').substring(0, 10), {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '10px',
+                color: entry.victory ? '#4ecca3' : '#ffffff'
+            });
+
+            this.add.text(320, y, `${entry.score}`, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '10px',
+                color: '#ffd700'
+            });
+
+            this.add.text(450, y, `${entry.level}/4`, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '10px',
+                color: '#ffffff'
+            });
+
+            // Fecha formateada
+            let dateStr = '-';
+            if (entry.date) {
+                const d = new Date(entry.date);
+                dateStr = `${d.getDate()}/${d.getMonth()+1}`;
+            }
+            this.add.text(550, y, dateStr, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '9px',
+                color: '#888888'
+            });
+        });
     }
 
     createButton(x, y, text, callback) {
@@ -1511,5 +1682,630 @@ class LeaderboardScene extends Phaser.Scene {
 
         container.on('pointerdown', callback);
         return container;
+    }
+}
+
+// ==================== MINIJUEGO: ORDENAR POR POBLACION ====================
+class OrderingGameScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'OrderingGameScene' });
+    }
+
+    init(data) {
+        this.level = data.level || 2;
+        this.totalCorrect = data.totalCorrect || 0;
+        this.score = data.score || 0;
+        this.lives = data.lives !== undefined ? data.lives : 3;
+        this.powerups = data.powerups || { fifty: 1, hint: 1, freeze: 1 };
+        this.isCountries = data.isCountries !== false; // true para países, false para ciudades
+        this.correctAnswers = data.correctAnswers || 0;
+        this.maxCombo = data.maxCombo || 0;
+    }
+
+    create() {
+        const levelInfo = GAME_DATA.niveles[this.level - 1];
+
+        // Fondo
+        this.bg = this.add.image(400, 300, `bg_${levelInfo.escenario}`);
+        this.bg.setAlpha(0.5);
+
+        // Título
+        this.add.text(400, 30, 'ORDENA POR POBLACION', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '16px',
+            color: '#ffd700'
+        }).setOrigin(0.5);
+
+        this.add.text(400, 55, '(de MAS a MENOS poblado)', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '9px',
+            color: '#4ecca3'
+        }).setOrigin(0.5);
+
+        // Seleccionar 5 elementos aleatorios
+        const source = this.isCountries ? GAME_DATA.top20Paises : GAME_DATA.top20Ciudades;
+        const shuffled = Phaser.Utils.Array.Shuffle([...source]);
+        this.items = shuffled.slice(0, 5);
+        this.correctOrder = [...this.items].sort((a, b) => a.posicion - b.posicion);
+
+        // Mezclar para mostrar
+        this.displayItems = Phaser.Utils.Array.Shuffle([...this.items]);
+
+        // Crear slots
+        this.slots = [];
+        this.cards = [];
+        this.selectedCard = null;
+
+        this.createSlots();
+        this.createCards();
+
+        // Botón confirmar
+        this.confirmBtn = this.createButton(400, 550, 'CONFIRMAR ORDEN', () => {
+            this.checkOrder();
+        });
+
+        // Instrucciones
+        this.add.text(400, 580, 'Arrastra o toca para intercambiar posiciones', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '7px',
+            color: '#666666'
+        }).setOrigin(0.5);
+
+        this.cameras.main.fadeIn(500);
+    }
+
+    createSlots() {
+        for (let i = 0; i < 5; i++) {
+            const y = 130 + i * 85;
+
+            // Número de posición
+            this.add.text(50, y, `${i + 1}.`, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '20px',
+                color: '#4ecca3'
+            }).setOrigin(0.5);
+
+            // Slot visual
+            const slot = this.add.rectangle(420, y, 600, 70, 0x1a1a2e, 0.5);
+            slot.setStrokeStyle(2, 0x4ecca3);
+            slot.slotIndex = i;
+
+            this.slots.push(slot);
+        }
+    }
+
+    createCards() {
+        this.displayItems.forEach((item, i) => {
+            const y = 130 + i * 85;
+            const card = this.createCard(420, y, item, i);
+            this.cards.push(card);
+        });
+    }
+
+    createCard(x, y, item, index) {
+        const container = this.add.container(x, y);
+
+        const bg = this.add.rectangle(0, 0, 580, 65, 0x16213e);
+        bg.setStrokeStyle(3, 0xe94560);
+
+        const name = this.add.text(-270, -10, item.nombre, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '12px',
+            color: '#ffffff'
+        });
+
+        const info = this.add.text(-270, 15, this.isCountries ? item.continente : `${item.pais}`, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '8px',
+            color: '#888888'
+        });
+
+        container.add([bg, name, info]);
+        container.setSize(580, 65);
+        container.setInteractive({ draggable: true });
+
+        container.itemData = item;
+        container.currentSlot = index;
+        container.bg = bg;
+
+        // Eventos de drag
+        container.on('dragstart', () => {
+            container.setDepth(100);
+            bg.setStrokeStyle(4, 0xffd700);
+        });
+
+        container.on('drag', (pointer, dragX, dragY) => {
+            container.y = dragY;
+        });
+
+        container.on('dragend', () => {
+            container.setDepth(0);
+            bg.setStrokeStyle(3, 0xe94560);
+            this.snapToSlot(container);
+        });
+
+        // Click para seleccionar (alternativa al drag)
+        container.on('pointerdown', () => {
+            if (this.selectedCard && this.selectedCard !== container) {
+                // Intercambiar
+                this.swapCards(this.selectedCard, container);
+                this.selectedCard.bg.setStrokeStyle(3, 0xe94560);
+                this.selectedCard = null;
+            } else if (this.selectedCard === container) {
+                // Deseleccionar
+                this.selectedCard.bg.setStrokeStyle(3, 0xe94560);
+                this.selectedCard = null;
+            } else {
+                // Seleccionar
+                this.selectedCard = container;
+                bg.setStrokeStyle(4, 0xffd700);
+            }
+        });
+
+        return container;
+    }
+
+    snapToSlot(card) {
+        // Encontrar slot más cercano
+        let closestSlot = 0;
+        let minDist = Infinity;
+
+        this.slots.forEach((slot, i) => {
+            const dist = Math.abs(card.y - slot.y);
+            if (dist < minDist) {
+                minDist = dist;
+                closestSlot = i;
+            }
+        });
+
+        // Si ya hay una carta en ese slot, intercambiar
+        const existingCard = this.cards.find(c => c !== card && c.currentSlot === closestSlot);
+        if (existingCard) {
+            existingCard.currentSlot = card.currentSlot;
+            this.tweens.add({
+                targets: existingCard,
+                y: this.slots[existingCard.currentSlot].y,
+                duration: 200
+            });
+        }
+
+        card.currentSlot = closestSlot;
+        this.tweens.add({
+            targets: card,
+            y: this.slots[closestSlot].y,
+            duration: 200
+        });
+    }
+
+    swapCards(card1, card2) {
+        const slot1 = card1.currentSlot;
+        const slot2 = card2.currentSlot;
+
+        card1.currentSlot = slot2;
+        card2.currentSlot = slot1;
+
+        this.tweens.add({
+            targets: card1,
+            y: this.slots[slot2].y,
+            duration: 200
+        });
+
+        this.tweens.add({
+            targets: card2,
+            y: this.slots[slot1].y,
+            duration: 200
+        });
+
+        audioManager.playClick();
+    }
+
+    checkOrder() {
+        // Ordenar cartas por su slot actual
+        const orderedCards = [...this.cards].sort((a, b) => a.currentSlot - b.currentSlot);
+        const userOrder = orderedCards.map(c => c.itemData);
+
+        let correct = 0;
+        userOrder.forEach((item, i) => {
+            if (item.posicion === this.correctOrder[i].posicion) {
+                correct++;
+                orderedCards[i].bg.setFillStyle(0x2a5a2a);
+            } else {
+                orderedCards[i].bg.setFillStyle(0x5a2a2a);
+            }
+        });
+
+        const isFullyCorrect = correct === 5;
+        const points = correct * 50;
+
+        this.score += points;
+        if (isFullyCorrect) {
+            this.totalCorrect++;
+            audioManager.playCorrect();
+        } else {
+            audioManager.playWrong();
+            this.lives--;
+        }
+
+        // Mostrar feedback
+        this.showFeedback(correct, isFullyCorrect);
+
+        // Continuar después
+        this.time.delayedCall(2500, () => {
+            this.returnToGame();
+        });
+    }
+
+    showFeedback(correct, isFullyCorrect) {
+        const feedback = this.add.container(400, 300);
+
+        const bg = this.add.rectangle(0, 0, 400, 150, isFullyCorrect ? 0x4ecca3 : 0xe94560, 0.95);
+        bg.setStrokeStyle(4, 0xffffff);
+
+        const title = this.add.text(0, -40, isFullyCorrect ? 'PERFECTO!' : `${correct}/5 CORRECTOS`, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '18px',
+            color: '#ffffff'
+        }).setOrigin(0.5);
+
+        const points = this.add.text(0, 10, `+${correct * 50} puntos`, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '14px',
+            color: '#ffd700'
+        }).setOrigin(0.5);
+
+        const orderText = this.add.text(0, 50, 'Orden correcto: ' + this.correctOrder.map(i => i.nombre.substring(0, 8)).join(' > '), {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '6px',
+            color: '#ffffff',
+            wordWrap: { width: 380 }
+        }).setOrigin(0.5);
+
+        feedback.add([bg, title, points, orderText]);
+        feedback.setScale(0);
+
+        this.tweens.add({
+            targets: feedback,
+            scale: 1,
+            duration: 300,
+            ease: 'Back.easeOut'
+        });
+    }
+
+    returnToGame() {
+        this.cameras.main.fadeOut(500);
+        this.time.delayedCall(500, () => {
+            this.scene.start('GameScene', {
+                level: this.level,
+                totalCorrect: this.totalCorrect,
+                score: this.score,
+                lives: this.lives,
+                powerups: this.powerups,
+                fromMinigame: true,
+                minigamePlayed: true,
+                currentQuestion: 5,
+                correctAnswers: this.correctAnswers,
+                maxCombo: this.maxCombo
+            });
+        });
+    }
+
+    createButton(x, y, text, callback) {
+        const container = this.add.container(x, y);
+
+        const bg = this.add.rectangle(0, 0, 280, 45, 0x16213e);
+        bg.setStrokeStyle(3, 0x4ecca3);
+
+        const label = this.add.text(0, 0, text, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '11px',
+            color: '#4ecca3'
+        }).setOrigin(0.5);
+
+        container.add([bg, label]);
+        container.setSize(280, 45);
+        container.setInteractive();
+
+        container.on('pointerover', () => {
+            bg.setFillStyle(0x4ecca3);
+            label.setColor('#0a0a15');
+        });
+
+        container.on('pointerout', () => {
+            bg.setFillStyle(0x16213e);
+            label.setColor('#4ecca3');
+        });
+
+        container.on('pointerdown', callback);
+        return container;
+    }
+}
+
+// ==================== MINIJUEGO: EMPAREJAR ====================
+class MatchingGameScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'MatchingGameScene' });
+    }
+
+    init(data) {
+        this.level = data.level || 1;
+        this.totalCorrect = data.totalCorrect || 0;
+        this.score = data.score || 0;
+        this.lives = data.lives !== undefined ? data.lives : 3;
+        this.powerups = data.powerups || { fifty: 1, hint: 1, freeze: 1 };
+        this.matchType = data.matchType || 'capitals'; // 'capitals', 'countries', 'cities'
+        this.correctAnswers = data.correctAnswers || 0;
+        this.maxCombo = data.maxCombo || 0;
+    }
+
+    create() {
+        const levelInfo = GAME_DATA.niveles[this.level - 1];
+
+        // Fondo
+        this.bg = this.add.image(400, 300, `bg_${levelInfo.escenario}`);
+        this.bg.setAlpha(0.5);
+
+        // Título según tipo
+        let title = 'EMPAREJA CAPITALES';
+        let subtitle = 'Conecta cada pais con su capital';
+
+        if (this.matchType === 'countries') {
+            title = 'EMPAREJA PAISES';
+            subtitle = 'Conecta cada pais con su continente';
+        } else if (this.matchType === 'cities') {
+            title = 'EMPAREJA CIUDADES';
+            subtitle = 'Conecta cada ciudad con su pais';
+        }
+
+        this.add.text(400, 25, title, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '16px',
+            color: '#ffd700'
+        }).setOrigin(0.5);
+
+        this.add.text(400, 50, subtitle, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '8px',
+            color: '#4ecca3'
+        }).setOrigin(0.5);
+
+        // Generar pares
+        this.generatePairs();
+
+        // Estado del juego
+        this.selectedLeft = null;
+        this.selectedRight = null;
+        this.matchedPairs = 0;
+        this.totalPairs = 5;
+        this.wrongAttempts = 0;
+
+        // Crear elementos
+        this.createMatchingElements();
+
+        // Gráficos para líneas
+        this.linesGraphics = this.add.graphics();
+
+        this.cameras.main.fadeIn(500);
+    }
+
+    generatePairs() {
+        this.pairs = [];
+
+        if (this.matchType === 'capitals') {
+            const caps = Phaser.Utils.Array.Shuffle([...GAME_DATA.capitalesEuropa]).slice(0, 5);
+            caps.forEach(c => {
+                const country = c.pregunta.replace('Cual es la capital de ', '').replace('?', '');
+                this.pairs.push({
+                    left: country,
+                    right: c.respuesta
+                });
+            });
+        } else if (this.matchType === 'countries') {
+            const countries = Phaser.Utils.Array.Shuffle([...GAME_DATA.top20Paises]).slice(0, 5);
+            countries.forEach(c => {
+                this.pairs.push({
+                    left: c.nombre,
+                    right: c.continente
+                });
+            });
+        } else if (this.matchType === 'cities') {
+            const cities = Phaser.Utils.Array.Shuffle([...GAME_DATA.top20Ciudades]).slice(0, 5);
+            cities.forEach(c => {
+                this.pairs.push({
+                    left: c.nombre,
+                    right: c.pais
+                });
+            });
+        }
+    }
+
+    createMatchingElements() {
+        this.leftItems = [];
+        this.rightItems = [];
+
+        // Mezclar lados
+        const leftTexts = Phaser.Utils.Array.Shuffle(this.pairs.map(p => p.left));
+        const rightTexts = Phaser.Utils.Array.Shuffle(this.pairs.map(p => p.right));
+
+        // Crear columna izquierda
+        leftTexts.forEach((text, i) => {
+            const y = 110 + i * 90;
+            const item = this.createMatchItem(120, y, text, 'left', i);
+            this.leftItems.push(item);
+        });
+
+        // Crear columna derecha
+        rightTexts.forEach((text, i) => {
+            const y = 110 + i * 90;
+            const item = this.createMatchItem(680, y, text, 'right', i);
+            this.rightItems.push(item);
+        });
+    }
+
+    createMatchItem(x, y, text, side, index) {
+        const container = this.add.container(x, y);
+
+        const bg = this.add.rectangle(0, 0, 220, 70, 0x16213e);
+        bg.setStrokeStyle(3, side === 'left' ? 0x4ecca3 : 0xe94560);
+
+        const label = this.add.text(0, 0, text, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '9px',
+            color: '#ffffff',
+            align: 'center',
+            wordWrap: { width: 200 }
+        }).setOrigin(0.5);
+
+        container.add([bg, label]);
+        container.setSize(220, 70);
+        container.setInteractive();
+
+        container.itemText = text;
+        container.side = side;
+        container.itemIndex = index;
+        container.bg = bg;
+        container.label = label;
+        container.isMatched = false;
+
+        container.on('pointerdown', () => {
+            if (container.isMatched) return;
+
+            audioManager.playClick();
+
+            if (side === 'left') {
+                if (this.selectedLeft) {
+                    this.selectedLeft.bg.setStrokeStyle(3, 0x4ecca3);
+                }
+                this.selectedLeft = container;
+                bg.setStrokeStyle(4, 0xffd700);
+            } else {
+                if (this.selectedRight) {
+                    this.selectedRight.bg.setStrokeStyle(3, 0xe94560);
+                }
+                this.selectedRight = container;
+                bg.setStrokeStyle(4, 0xffd700);
+            }
+
+            // Verificar si hay pareja seleccionada
+            if (this.selectedLeft && this.selectedRight) {
+                this.checkMatch();
+            }
+        });
+
+        return container;
+    }
+
+    checkMatch() {
+        const leftText = this.selectedLeft.itemText;
+        const rightText = this.selectedRight.itemText;
+
+        // Buscar si es pareja correcta
+        const isCorrect = this.pairs.some(p => p.left === leftText && p.right === rightText);
+
+        if (isCorrect) {
+            // Correcto
+            audioManager.playCorrect();
+            this.matchedPairs++;
+            this.score += 40;
+
+            // Marcar como emparejados
+            this.selectedLeft.isMatched = true;
+            this.selectedRight.isMatched = true;
+            this.selectedLeft.bg.setFillStyle(0x2a5a2a);
+            this.selectedRight.bg.setFillStyle(0x2a5a2a);
+            this.selectedLeft.bg.setStrokeStyle(3, 0x4ecca3);
+            this.selectedRight.bg.setStrokeStyle(3, 0x4ecca3);
+
+            // Dibujar línea conectora
+            this.linesGraphics.lineStyle(3, 0x4ecca3);
+            this.linesGraphics.lineBetween(
+                this.selectedLeft.x + 110, this.selectedLeft.y,
+                this.selectedRight.x - 110, this.selectedRight.y
+            );
+
+            // Verificar si completó todo
+            if (this.matchedPairs >= this.totalPairs) {
+                this.totalCorrect++;
+                this.time.delayedCall(1000, () => this.showResult(true));
+            }
+        } else {
+            // Incorrecto
+            audioManager.playWrong();
+            this.wrongAttempts++;
+
+            // Flash rojo
+            this.selectedLeft.bg.setFillStyle(0x5a2a2a);
+            this.selectedRight.bg.setFillStyle(0x5a2a2a);
+
+            this.time.delayedCall(300, () => {
+                if (!this.selectedLeft.isMatched) {
+                    this.selectedLeft.bg.setFillStyle(0x16213e);
+                    this.selectedLeft.bg.setStrokeStyle(3, 0x4ecca3);
+                }
+                if (!this.selectedRight.isMatched) {
+                    this.selectedRight.bg.setFillStyle(0x16213e);
+                    this.selectedRight.bg.setStrokeStyle(3, 0xe94560);
+                }
+            });
+
+            if (this.wrongAttempts >= 3) {
+                this.lives--;
+                this.time.delayedCall(500, () => this.showResult(false));
+            }
+        }
+
+        this.selectedLeft = null;
+        this.selectedRight = null;
+    }
+
+    showResult(success) {
+        const feedback = this.add.container(400, 300);
+
+        const bgColor = success ? 0x4ecca3 : 0xe94560;
+        const bg = this.add.rectangle(0, 0, 400, 150, bgColor, 0.95);
+        bg.setStrokeStyle(4, 0xffffff);
+
+        const title = this.add.text(0, -30, success ? 'COMPLETADO!' : 'DEMASIADOS ERRORES', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '14px',
+            color: '#ffffff'
+        }).setOrigin(0.5);
+
+        const points = this.add.text(0, 20, `+${this.matchedPairs * 40} puntos`, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '12px',
+            color: '#ffd700'
+        }).setOrigin(0.5);
+
+        feedback.add([bg, title, points]);
+        feedback.setScale(0);
+
+        this.tweens.add({
+            targets: feedback,
+            scale: 1,
+            duration: 300,
+            ease: 'Back.easeOut'
+        });
+
+        this.time.delayedCall(2000, () => {
+            this.returnToGame();
+        });
+    }
+
+    returnToGame() {
+        this.cameras.main.fadeOut(500);
+        this.time.delayedCall(500, () => {
+            this.scene.start('GameScene', {
+                level: this.level,
+                totalCorrect: this.totalCorrect,
+                score: this.score,
+                lives: this.lives,
+                powerups: this.powerups,
+                fromMinigame: true,
+                minigamePlayed: true,
+                currentQuestion: 5,
+                correctAnswers: this.correctAnswers,
+                maxCombo: this.maxCombo
+            });
+        });
     }
 }

@@ -335,18 +335,23 @@ class MenuScene extends Phaser.Scene {
         });
 
         // Botones
-        this.createButton(400, 470, 'JUGAR', () => {
+        this.createButton(400, 450, 'JUGAR', () => {
             audioManager.playClick();
             this.startGame();
         });
 
-        this.createButton(400, 530, 'INSTRUCCIONES', () => {
+        this.createButton(250, 510, 'RANKING', () => {
+            audioManager.playClick();
+            this.scene.start('LeaderboardScene');
+        }, 180);
+
+        this.createButton(550, 510, 'INSTRUCCIONES', () => {
             audioManager.playClick();
             this.showInstructions();
-        });
+        }, 180);
 
         // Instrucciones de audio
-        this.add.text(400, 585, 'Click para activar audio', {
+        this.add.text(400, 565, 'Click para activar audio', {
             fontFamily: '"Press Start 2P"',
             fontSize: '8px',
             color: '#666666'
@@ -362,39 +367,40 @@ class MenuScene extends Phaser.Scene {
         this.cameras.main.fadeIn(500);
     }
 
-    createButton(x, y, text, callback) {
+    createButton(x, y, text, callback, width = 240) {
         const container = this.add.container(x, y);
+        const halfWidth = width / 2;
 
         const bg = this.add.graphics();
         bg.fillStyle(0x16213e, 1);
-        bg.fillRoundedRect(-120, -22, 240, 44, 5);
+        bg.fillRoundedRect(-halfWidth, -22, width, 44, 5);
         bg.lineStyle(3, 0xe94560);
-        bg.strokeRoundedRect(-120, -22, 240, 44, 5);
+        bg.strokeRoundedRect(-halfWidth, -22, width, 44, 5);
 
         const label = this.add.text(0, 0, text, {
             fontFamily: '"Press Start 2P"',
-            fontSize: '14px',
+            fontSize: width < 200 ? '11px' : '14px',
             color: '#e94560'
         }).setOrigin(0.5);
 
         container.add([bg, label]);
-        container.setSize(240, 44);
+        container.setSize(width, 44);
         container.setInteractive();
 
         container.on('pointerover', () => {
             audioManager.playHover();
             bg.clear();
             bg.fillStyle(0xe94560, 1);
-            bg.fillRoundedRect(-120, -22, 240, 44, 5);
+            bg.fillRoundedRect(-halfWidth, -22, width, 44, 5);
             label.setColor('#0a0a15');
         });
 
         container.on('pointerout', () => {
             bg.clear();
             bg.fillStyle(0x16213e, 1);
-            bg.fillRoundedRect(-120, -22, 240, 44, 5);
+            bg.fillRoundedRect(-halfWidth, -22, width, 44, 5);
             bg.lineStyle(3, 0xe94560);
-            bg.strokeRoundedRect(-120, -22, 240, 44, 5);
+            bg.strokeRoundedRect(-halfWidth, -22, width, 44, 5);
             label.setColor('#e94560');
         });
 
