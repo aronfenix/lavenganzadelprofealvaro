@@ -1344,65 +1344,111 @@ class FinalScene extends Phaser.Scene {
             highScore: this.score
         });
 
-        // Profesor DERROTADO - cabizbajo
-        this.professor = this.add.sprite(400, 100, 'prof_defeat_0');
-        this.professor.setScale(2.5);
+        // ===== ESCENA DRAMÁTICA DE VICTORIA =====
 
-        // Maleta pixelada al lado del profesor
-        const suitcase = this.add.graphics();
-        suitcase.fillStyle(0x8b4513);
-        suitcase.fillRect(480, 140, 40, 30);
-        suitcase.fillStyle(0x654321);
-        suitcase.fillRect(495, 135, 10, 5);
-        suitcase.fillStyle(0xffd700);
-        suitcase.fillRect(498, 150, 4, 4);
+        // Fondo especial de victoria
+        this.add.rectangle(400, 300, 800, 600, 0x0a1a0a);
 
-        // Animación del profesor yéndose lentamente
-        this.tweens.add({
-            targets: this.professor,
-            x: -100,
-            duration: 8000,
-            ease: 'Linear',
-            delay: 3000
-        });
-
-        this.tweens.add({
-            targets: suitcase,
-            x: -180,
-            duration: 8000,
-            ease: 'Linear',
-            delay: 3000
-        });
-
-        // Título
-        this.add.text(400, 180, '¡VICTORIA!', {
+        // Título grande con efecto glow
+        const victoryTitle = this.add.text(400, 50, '¡VICTORIA TOTAL!', {
             fontFamily: '"Press Start 2P"',
-            fontSize: '24px',
+            fontSize: '28px',
+            color: '#ffd700'
+        }).setOrigin(0.5);
+
+        // Animación de brillo del título
+        this.tweens.add({
+            targets: victoryTitle,
+            alpha: 0.7,
+            yoyo: true,
+            repeat: -1,
+            duration: 500
+        });
+
+        // Subtítulo
+        this.add.text(400, 90, '¡Has derrotado al Profesor Álvaro!', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '10px',
             color: '#4ecca3'
         }).setOrigin(0.5);
 
-        this.add.text(400, 210, '¡Has derrotado al Profesor Álvaro!', {
+        // ===== ESCENA DEL PROFESOR YÉNDOSE =====
+
+        // Fondo de "camino" para el profesor
+        this.add.rectangle(400, 200, 800, 120, 0x2a3a2a);
+
+        // Línea de horizonte
+        this.add.rectangle(400, 145, 800, 4, 0x4a5a4a);
+
+        // Sol poniéndose (círculo naranja)
+        const sun = this.add.circle(650, 150, 30, 0xffa500);
+
+        // Profesor derrotado - empieza a la derecha
+        this.professor = this.add.sprite(750, 190, 'prof_defeat_0');
+        this.professor.setScale(2);
+        this.professor.setFlipX(true); // Mirando hacia la izquierda
+
+        // Maleta grande y visible
+        const suitcaseContainer = this.add.container(780, 210);
+        const suitcaseBody = this.add.rectangle(0, 0, 30, 22, 0x8b4513);
+        const suitcaseHandle = this.add.rectangle(0, -14, 10, 6, 0x654321);
+        const suitcaseLock = this.add.rectangle(0, 0, 4, 4, 0xffd700);
+        suitcaseContainer.add([suitcaseBody, suitcaseHandle, suitcaseLock]);
+
+        // Animación del profesor caminando hacia la izquierda
+        this.tweens.add({
+            targets: [this.professor, suitcaseContainer],
+            x: '-=850',
+            duration: 10000,
+            ease: 'Linear',
+            delay: 2000
+        });
+
+        // Animación de caminar (balanceo)
+        this.tweens.add({
+            targets: this.professor,
+            y: '+=3',
+            yoyo: true,
+            repeat: -1,
+            duration: 300,
+            delay: 2000
+        });
+
+        // ===== EPÍLOGO DESTACADO =====
+
+        // Caja del epílogo
+        const epilogoBox = this.add.rectangle(400, 320, 700, 100, 0x1a2a1a, 0.95);
+        epilogoBox.setStrokeStyle(3, 0x4ecca3);
+
+        // Texto del epílogo - MÁS GRANDE Y DESTACADO
+        const epilogos = [
+            '"Ya no me queda nada que enseñar...\nMe retiro al campo a criar gallinas."',
+            '"Habéis demostrado ser más listos que yo...\nMe voy a cultivar tomates a Segovia."',
+            '"Mi reinado ha terminado...\nComienza mi nueva vida como pastor."',
+            '"El conocimiento os ha dado la victoria...\nYo me voy a hacer quesos a Asturias."'
+        ];
+        const epilogo = epilogos[Math.floor(Math.random() * epilogos.length)];
+
+        this.add.text(400, 320, epilogo, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '10px',
+            color: '#ffffff',
+            align: 'center',
+            lineSpacing: 10
+        }).setOrigin(0.5);
+
+        // Puntuación final
+        this.add.text(400, 400, `PUNTUACIÓN FINAL: ${this.score}`, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '14px',
+            color: '#ffd700'
+        }).setOrigin(0.5);
+
+        // Estadísticas
+        this.add.text(400, 430, `Aciertos totales: ${this.totalCorrect}`, {
             fontFamily: '"Press Start 2P"',
             fontSize: '8px',
-            color: '#ffffff'
-        }).setOrigin(0.5);
-
-        this.add.text(400, 255, epilogo, {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '6px',
-            color: '#88ccaa',
-            align: 'center',
-            lineSpacing: 6
-        }).setOrigin(0.5);
-
-        // Frase final del profesor derrotado
-        const phrase = GAME_DATA.frases.victoriaFinal[Math.floor(Math.random() * GAME_DATA.frases.victoriaFinal.length)];
-        this.add.text(400, 310, `"${phrase}"`, {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '7px',
-            color: '#4ecca3',
-            align: 'center',
-            wordWrap: { width: 550 }
+            color: '#888888'
         }).setOrigin(0.5);
 
         this.showCommonUI();
@@ -1415,30 +1461,42 @@ class FinalScene extends Phaser.Scene {
         // Guardar puntuación
         this.saveScore();
 
+        // Posición de botones diferente según victoria/derrota
+        const buttonY = this.victory ? 470 : 340;
+
         // Botones
-        this.createSmallButton(130, 340, 'MENU', () => {
+        this.createSmallButton(130, buttonY, 'MENU', () => {
             audioManager.playClick();
             this.scene.start('EnhancedMenuScene');
         });
 
-        this.createSmallButton(310, 340, 'RANKING', () => {
+        this.createSmallButton(310, buttonY, 'RANKING', () => {
             audioManager.playClick();
             this.scene.start('LeaderboardScene');
         });
 
-        this.createSmallButton(490, 340, 'REINTENTAR', () => {
+        this.createSmallButton(490, buttonY, 'REINTENTAR', () => {
             audioManager.playClick();
             this.scene.start('LevelIntroScene', { level: 1 });
         });
 
-        // Input para nombre si es puntuación alta
-        if (this.score > 0) {
+        // Input para nombre (solo en derrota para no sobrecargar la victoria)
+        if (this.score > 0 && !this.victory) {
             this.showNameInput();
+        }
+
+        // En victoria, guardar automáticamente como "CAMPEÓN"
+        if (this.victory && this.score > 0) {
+            this.nameInput = 'CAMPEON';
+            this.time.delayedCall(1000, () => this.saveName());
         }
     }
 
     showNameInput() {
-        this.add.text(400, 365, 'Introduce tu nombre:', {
+        const inputY = 365;
+        const containerY = 390;
+
+        this.add.text(400, inputY, 'Introduce tu nombre:', {
             fontFamily: '"Press Start 2P"',
             fontSize: '8px',
             color: '#4ecca3'
@@ -1446,7 +1504,7 @@ class FinalScene extends Phaser.Scene {
 
         // Input visual
         this.nameInput = '';
-        this.nameContainer = this.add.container(400, 390);
+        this.nameContainer = this.add.container(400, containerY);
 
         const inputBg = this.add.graphics();
         inputBg.fillStyle(0x1a1a2e, 1);
@@ -2755,14 +2813,16 @@ class MapGameScene extends Phaser.Scene {
 
         const q = this.questions[this.currentQuestion];
 
-        // Calcular posición relativa al mapa
-        const mapBounds = this.map.getBounds();
-        const clickX = pointer.x - mapBounds.left;
-        const clickY = pointer.y - mapBounds.top;
+        // El mapa está centrado en (400, 320) y tiene tamaño 700x500
+        // Las coordenadas en europeCountries/worldLocations van de 0-700 y 0-500
+        const mapCenterX = 400;
+        const mapCenterY = 320;
+        const mapWidth = 700;
+        const mapHeight = 500;
 
-        // Posición correcta (escalada al tamaño del mapa)
-        const correctX = q.x * (mapBounds.width / 700) + mapBounds.left;
-        const correctY = q.y * (mapBounds.height / 500) + mapBounds.top;
+        // Convertir coordenadas del dato (0-700, 0-500) a coordenadas de pantalla
+        const correctX = mapCenterX - mapWidth/2 + q.x;
+        const correctY = mapCenterY - mapHeight/2 + q.y;
 
         // Mostrar marcador de clic
         this.clickMarker.setPosition(pointer.x, pointer.y);
