@@ -2689,15 +2689,21 @@ class MapGameScene extends Phaser.Scene {
     create() {
         try {
             // Fondo según el tipo de mapa
-            if (this.mapType === 'europe') {
-                this.add.rectangle(400, 300, 800, 600, 0x0a2a4a);
-                this.map = this.add.image(400, 320, 'map_europe_large');
-                this.locations = { ...MAP_DATA.europe };
+            const mapKey = this.mapType === 'europe' ? 'map_europe_large' : 'map_world_large';
+            const bgColor = this.mapType === 'europe' ? 0x0a2a4a : 0x0a3a5a;
+
+            this.add.rectangle(400, 300, 800, 600, bgColor);
+
+            // Verificar si la textura del mapa existe
+            if (!this.textures.exists(mapKey)) {
+                console.error('MapGameScene: Textura no encontrada:', mapKey);
+                // Crear un mapa de fallback (rectángulo con cuadrícula)
+                this.createFallbackMap();
             } else {
-                this.add.rectangle(400, 300, 800, 600, 0x0a3a5a);
-                this.map = this.add.image(400, 320, 'map_world_large');
-                this.locations = { ...MAP_DATA.world };
+                this.map = this.add.image(400, 320, mapKey);
             }
+
+            this.locations = this.mapType === 'europe' ? { ...MAP_DATA.europe } : { ...MAP_DATA.world };
 
             // Ajustar posición del mapa
             this.mapOffsetX = 50;
@@ -2736,9 +2742,9 @@ class MapGameScene extends Phaser.Scene {
             // Mostrar primera pregunta
             this.showQuestion();
 
-            // Input del mapa
-            this.map.setInteractive();
-            this.map.on('pointerdown', (pointer) => this.handleMapClick(pointer));
+            // Input del mapa (usando zona interactiva sobre el área del mapa)
+            this.mapZone = this.add.zone(400, 320, 700, 500).setInteractive();
+            this.mapZone.on('pointerdown', (pointer) => this.handleMapClick(pointer));
 
             // Marcador para mostrar dónde se hizo clic
             this.clickMarker = this.add.circle(0, 0, 8, 0xffd700);
@@ -2754,6 +2760,49 @@ class MapGameScene extends Phaser.Scene {
             console.error('MapGameScene error:', error);
             this.showErrorAndReturn('Error en el minijuego');
         }
+    }
+
+    createFallbackMap() {
+        // Mapa de respaldo si la textura no cargó
+        const graphics = this.add.graphics();
+
+        // Fondo del mapa
+        graphics.fillStyle(0x2a4a6a);
+        graphics.fillRect(50, 70, 700, 500);
+
+        // Cuadrícula
+        graphics.lineStyle(1, 0x3a5a7a);
+        for (let x = 50; x <= 750; x += 70) {
+            graphics.lineBetween(x, 70, x, 570);
+        }
+        for (let y = 70; y <= 570; y += 50) {
+            graphics.lineBetween(50, y, 750, y);
+        }
+
+        // Borde
+        graphics.lineStyle(3, 0x4ecca3);
+        graphics.strokeRect(50, 70, 700, 500);
+
+        // Dibujar ubicaciones como círculos
+        const locations = this.mapType === 'europe' ? MAP_DATA.europe : MAP_DATA.world;
+        Object.entries(locations).forEach(([name, data]) => {
+            const screenX = 50 + data.x;
+            const screenY = 70 + data.y;
+
+            graphics.fillStyle(0xff4444);
+            graphics.fillCircle(screenX, screenY, 8);
+            graphics.lineStyle(2, 0xffffff);
+            graphics.strokeCircle(screenX, screenY, 8);
+
+            // Etiqueta
+            this.add.text(screenX, screenY - 15, name, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '6px',
+                color: '#ffffff'
+            }).setOrigin(0.5);
+        });
+
+        this.map = graphics;
     }
 
     showErrorAndReturn(message) {
@@ -2881,29 +2930,29 @@ class MapGameScene extends Phaser.Scene {
             message = '¡PERFECTO!';
             messageColor = '#4ecca3';
             this.correctInRound++;
-            audioManager.playCorrect();
+            audioManager && audioManager.playCorrect && audioManager.playCorrect();
         } else if (distance < 60) {
             points = 75;
             message = '¡MUY CERCA!';
             messageColor = '#4ecca3';
             this.correctInRound++;
-            audioManager.playCorrect();
+            audioManager && audioManager.playCorrect && audioManager.playCorrect();
         } else if (distance < 100) {
             points = 50;
             message = '¡CERCA!';
             messageColor = '#ffd700';
-            audioManager.playClick();
+            audioManager && audioManager.playClick && audioManager.playClick();
         } else if (distance < 150) {
             points = 25;
             message = 'Un poco lejos...';
             messageColor = '#ff9900';
-            audioManager.playClick();
+            audioManager && audioManager.playClick && audioManager.playClick();
         } else {
             points = 0;
             message = '¡Fallaste!';
             messageColor = '#e94560';
             this.lives--;
-            audioManager.playWrong();
+            audioManager && audioManager.playWrong && audioManager.playWrong();
         }
 
         // Mostrar posición correcta
