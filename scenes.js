@@ -2739,9 +2739,6 @@ class MapGameScene extends Phaser.Scene {
             // UI
             this.createUI();
 
-            // Mostrar primera pregunta
-            this.showQuestion();
-
             // Input del mapa (usando zona interactiva sobre el área del mapa)
             this.mapZone = this.add.zone(400, 320, 700, 500).setInteractive();
             this.mapZone.on('pointerdown', (pointer) => this.handleMapClick(pointer));
@@ -2754,6 +2751,9 @@ class MapGameScene extends Phaser.Scene {
             this.correctMarker = this.add.circle(0, 0, 12, 0x4ecca3);
             this.correctMarker.setStrokeStyle(3, 0xffffff);
             this.correctMarker.setVisible(false);
+
+            // Mostrar primera pregunta (DESPUÉS de crear los marcadores)
+            this.showQuestion();
 
             this.cameras.main.fadeIn(500);
         } catch (error) {
