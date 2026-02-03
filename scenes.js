@@ -1143,8 +1143,20 @@ class LevelResultScene extends Phaser.Scene {
             lineSpacing: 10
         }).setOrigin(0.5);
 
-        const phraseType = this.passed ? 'nivelSuperado' : 'nivelFallido';
-        const phrase = GAME_DATA.frases[phraseType][Math.floor(Math.random() * GAME_DATA.frases[phraseType].length)];
+        let phrase;
+        if (this.passed && this.level >= 4) {
+            // Frases especiales para la victoria final
+            const victoryPhrases = [
+                '¡Imposible! ¡Habéis respondido a todo!',
+                '¡No puede ser! ¡Sois demasiado listos!',
+                '¡Mi examen definitivo... derrotado!',
+                '¡El conocimiento ha triunfado!'
+            ];
+            phrase = victoryPhrases[Math.floor(Math.random() * victoryPhrases.length)];
+        } else {
+            const phraseType = this.passed ? 'nivelSuperado' : 'nivelFallido';
+            phrase = GAME_DATA.frases[phraseType][Math.floor(Math.random() * GAME_DATA.frases[phraseType].length)];
+        }
 
         this.add.text(400, 470, `"${phrase}"`, {
             fontFamily: '"Press Start 2P"',
@@ -1344,83 +1356,92 @@ class FinalScene extends Phaser.Scene {
             highScore: this.score
         });
 
-        // ===== ESCENA DRAMÁTICA DE VICTORIA =====
-
-        // Fondo especial de victoria
-        this.add.rectangle(400, 300, 800, 600, 0x0a1a0a);
-
-        // Título grande con efecto glow
-        const victoryTitle = this.add.text(400, 50, '¡VICTORIA TOTAL!', {
+        // ===== TÍTULO =====
+        const victoryTitle = this.add.text(400, 35, '¡VICTORIA TOTAL!', {
             fontFamily: '"Press Start 2P"',
             fontSize: '28px',
             color: '#ffd700'
         }).setOrigin(0.5);
 
-        // Animación de brillo del título
         this.tweens.add({
             targets: victoryTitle,
-            alpha: 0.7,
+            alpha: 0.6,
             yoyo: true,
             repeat: -1,
-            duration: 500
+            duration: 400
         });
 
-        // Subtítulo
-        this.add.text(400, 90, '¡Has derrotado al Profesor Álvaro!', {
+        this.add.text(400, 70, '¡Has derrotado al Profesor Álvaro!', {
             fontFamily: '"Press Start 2P"',
-            fontSize: '10px',
+            fontSize: '9px',
             color: '#4ecca3'
         }).setOrigin(0.5);
 
         // ===== ESCENA DEL PROFESOR YÉNDOSE =====
 
-        // Fondo de "camino" para el profesor
-        this.add.rectangle(400, 200, 800, 120, 0x2a3a2a);
+        // Fondo del "camino" - franja horizontal
+        this.add.rectangle(400, 160, 800, 100, 0x3a4a3a);
+        this.add.rectangle(400, 115, 800, 3, 0x5a6a5a); // Horizonte
 
-        // Línea de horizonte
-        this.add.rectangle(400, 145, 800, 4, 0x4a5a4a);
+        // Sol
+        this.add.circle(680, 120, 25, 0xffa500);
 
-        // Sol poniéndose (círculo naranja)
-        const sun = this.add.circle(650, 150, 30, 0xffa500);
+        // Profesor derrotado - VISIBLE desde el inicio en el centro
+        this.professor = this.add.sprite(500, 155, 'prof_defeat_0');
+        this.professor.setScale(1.8);
+        this.professor.setFlipX(true);
 
-        // Profesor derrotado - empieza a la derecha
-        this.professor = this.add.sprite(750, 190, 'prof_defeat_0');
-        this.professor.setScale(2);
-        this.professor.setFlipX(true); // Mirando hacia la izquierda
-
-        // Maleta grande y visible
-        const suitcaseContainer = this.add.container(780, 210);
-        const suitcaseBody = this.add.rectangle(0, 0, 30, 22, 0x8b4513);
-        const suitcaseHandle = this.add.rectangle(0, -14, 10, 6, 0x654321);
-        const suitcaseLock = this.add.rectangle(0, 0, 4, 4, 0xffd700);
-        suitcaseContainer.add([suitcaseBody, suitcaseHandle, suitcaseLock]);
-
-        // Animación del profesor caminando hacia la izquierda
-        this.tweens.add({
-            targets: [this.professor, suitcaseContainer],
-            x: '-=850',
-            duration: 10000,
-            ease: 'Linear',
-            delay: 2000
+        // Animación de frames del profesor (caminar derrotado)
+        this.time.addEvent({
+            delay: 300,
+            callback: () => {
+                if (this.professor && this.professor.active) {
+                    const frame = this.professor.texture.key.endsWith('0') ? 1 : 0;
+                    this.professor.setTexture(`prof_defeat_${frame}`);
+                }
+            },
+            loop: true
         });
 
-        // Animación de caminar (balanceo)
+        // Maleta al lado
+        const maleta = this.add.graphics();
+        maleta.fillStyle(0x8b4513);
+        maleta.fillRect(540, 175, 25, 18);
+        maleta.fillStyle(0x654321);
+        maleta.fillRect(550, 170, 8, 5);
+        maleta.fillStyle(0xffd700);
+        maleta.fillRect(551, 182, 3, 3);
+
+        // Animación: profesor camina hacia la izquierda y desaparece
+        this.tweens.add({
+            targets: this.professor,
+            x: -100,
+            duration: 8000,
+            ease: 'Linear',
+            delay: 1500
+        });
+
+        this.tweens.add({
+            targets: maleta,
+            x: -60,
+            duration: 8000,
+            ease: 'Linear',
+            delay: 1500
+        });
+
+        // Balanceo al caminar
         this.tweens.add({
             targets: this.professor,
             y: '+=3',
             yoyo: true,
             repeat: -1,
-            duration: 300,
-            delay: 2000
+            duration: 200
         });
 
         // ===== EPÍLOGO DESTACADO =====
+        const epilogoBox = this.add.rectangle(400, 280, 720, 90, 0x0a150a, 0.95);
+        epilogoBox.setStrokeStyle(4, 0x4ecca3);
 
-        // Caja del epílogo
-        const epilogoBox = this.add.rectangle(400, 320, 700, 100, 0x1a2a1a, 0.95);
-        epilogoBox.setStrokeStyle(3, 0x4ecca3);
-
-        // Texto del epílogo - MÁS GRANDE Y DESTACADO
         const epilogos = [
             '"Ya no me queda nada que enseñar...\nMe retiro al campo a criar gallinas."',
             '"Habéis demostrado ser más listos que yo...\nMe voy a cultivar tomates a Segovia."',
@@ -1429,25 +1450,24 @@ class FinalScene extends Phaser.Scene {
         ];
         const epilogo = epilogos[Math.floor(Math.random() * epilogos.length)];
 
-        this.add.text(400, 320, epilogo, {
+        this.add.text(400, 280, epilogo, {
             fontFamily: '"Press Start 2P"',
-            fontSize: '10px',
+            fontSize: '11px',
             color: '#ffffff',
             align: 'center',
-            lineSpacing: 10
+            lineSpacing: 12
         }).setOrigin(0.5);
 
-        // Puntuación final
-        this.add.text(400, 400, `PUNTUACIÓN FINAL: ${this.score}`, {
+        // ===== PUNTUACIÓN =====
+        this.add.text(400, 365, `PUNTUACIÓN FINAL: ${this.score}`, {
             fontFamily: '"Press Start 2P"',
-            fontSize: '14px',
+            fontSize: '16px',
             color: '#ffd700'
         }).setOrigin(0.5);
 
-        // Estadísticas
-        this.add.text(400, 430, `Aciertos totales: ${this.totalCorrect}`, {
+        this.add.text(400, 395, `Aciertos: ${this.totalCorrect} | Nivel: ${this.level}/4`, {
             fontFamily: '"Press Start 2P"',
-            fontSize: '8px',
+            fontSize: '9px',
             color: '#888888'
         }).setOrigin(0.5);
 
@@ -2620,6 +2640,35 @@ class MatchingGameScene extends Phaser.Scene {
 }
 
 // ==================== MINIJUEGO: MAPA INTERACTIVO ====================
+
+// Datos de ubicaciones directamente aquí para evitar problemas de acceso
+const MAP_DATA = {
+    europe: {
+        'España': { x: 150, y: 350, capital: 'Madrid' },
+        'Francia': { x: 230, y: 270, capital: 'París' },
+        'Alemania': { x: 320, y: 210, capital: 'Berlín' },
+        'Italia': { x: 340, y: 340, capital: 'Roma' },
+        'Reino Unido': { x: 190, y: 170, capital: 'Londres' },
+        'Portugal': { x: 100, y: 360, capital: 'Lisboa' },
+        'Polonia': { x: 400, y: 200, capital: 'Varsovia' },
+        'Suecia': { x: 360, y: 100, capital: 'Estocolmo' },
+        'Grecia': { x: 450, y: 390, capital: 'Atenas' },
+        'Países Bajos': { x: 270, y: 190, capital: 'Ámsterdam' }
+    },
+    world: {
+        'China': { x: 540, y: 200, capital: 'Pekín' },
+        'India': { x: 490, y: 260, capital: 'Nueva Delhi' },
+        'Estados Unidos': { x: 120, y: 180, capital: 'Washington' },
+        'Brasil': { x: 200, y: 340, capital: 'Brasilia' },
+        'Rusia': { x: 480, y: 100, capital: 'Moscú' },
+        'Japón': { x: 620, y: 200, capital: 'Tokio' },
+        'México': { x: 100, y: 250, capital: 'Ciudad de México' },
+        'Australia': { x: 600, y: 400, capital: 'Canberra' },
+        'Egipto': { x: 370, y: 230, capital: 'El Cairo' },
+        'Argentina': { x: 180, y: 420, capital: 'Buenos Aires' }
+    }
+};
+
 class MapGameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MapGameScene' });
@@ -2643,20 +2692,11 @@ class MapGameScene extends Phaser.Scene {
             if (this.mapType === 'europe') {
                 this.add.rectangle(400, 300, 800, 600, 0x0a2a4a);
                 this.map = this.add.image(400, 320, 'map_europe_large');
-                this.locations = SpriteGenerator.europeCountries ? { ...SpriteGenerator.europeCountries } : {};
-                this.mapScale = 1.0;
+                this.locations = { ...MAP_DATA.europe };
             } else {
                 this.add.rectangle(400, 300, 800, 600, 0x0a3a5a);
                 this.map = this.add.image(400, 320, 'map_world_large');
-                this.locations = SpriteGenerator.worldLocations ? { ...SpriteGenerator.worldLocations } : {};
-                this.mapScale = 1.0;
-            }
-
-            // Verificar que tenemos ubicaciones
-            if (Object.keys(this.locations).length === 0) {
-                console.error('MapGameScene: No se encontraron ubicaciones para el mapa');
-                this.showErrorAndReturn('Error al cargar el mapa');
-                return;
+                this.locations = { ...MAP_DATA.world };
             }
 
             // Ajustar posición del mapa

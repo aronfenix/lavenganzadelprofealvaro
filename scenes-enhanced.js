@@ -285,6 +285,85 @@ class EnhancedMenuScene extends Phaser.Scene {
         });
 
         this.cameras.main.fadeIn(500);
+
+        // ===== MODO DEBUG =====
+        // Atajos de teclado para probar escenas directamente
+        this.createDebugMode();
+    }
+
+    createDebugMode() {
+        // Texto de ayuda debug (pequeño y discreto)
+        const debugHelp = this.add.text(10, 580, 'DEBUG: M=Mapa F=Final V=Victoria O=Orden T=Match', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '6px',
+            color: '#333333'
+        });
+
+        // Atajos de teclado
+        this.input.keyboard.on('keydown-M', () => {
+            // Probar MapGameScene (mapa de Europa)
+            this.scene.start('MapGameScene', {
+                level: 1,
+                mapType: 'europe',
+                isCapitals: true,
+                totalCorrect: 5,
+                score: 1000,
+                lives: 3
+            });
+        });
+
+        this.input.keyboard.on('keydown-F', () => {
+            // Probar FinalScene (derrota)
+            this.scene.start('FinalScene', {
+                victory: false,
+                level: 3,
+                totalCorrect: 15,
+                score: 3500,
+                reason: 'lives'
+            });
+        });
+
+        this.input.keyboard.on('keydown-V', () => {
+            // Probar FinalScene (victoria)
+            this.scene.start('FinalScene', {
+                victory: true,
+                level: 4,
+                totalCorrect: 35,
+                score: 8500
+            });
+        });
+
+        this.input.keyboard.on('keydown-O', () => {
+            // Probar OrderingGameScene
+            this.scene.start('OrderingGameScene', {
+                level: 2,
+                totalCorrect: 10,
+                score: 2000,
+                lives: 3
+            });
+        });
+
+        this.input.keyboard.on('keydown-T', () => {
+            // Probar MatchingGameScene
+            this.scene.start('MatchingGameScene', {
+                level: 1,
+                totalCorrect: 5,
+                score: 1200,
+                lives: 3
+            });
+        });
+
+        this.input.keyboard.on('keydown-W', () => {
+            // Probar MapGameScene (mapa del mundo)
+            this.scene.start('MapGameScene', {
+                level: 3,
+                mapType: 'world',
+                isCapitals: false,
+                totalCorrect: 20,
+                score: 4000,
+                lives: 3
+            });
+        });
     }
 
     createBackground() {
