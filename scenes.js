@@ -1834,8 +1834,8 @@ class LeaderboardScene extends Phaser.Scene {
         // Línea separadora
         this.add.rectangle(400, 105, 720, 2, 0x4ecca3);
 
-        // Mostrar top 15
-        const displayScores = scores.slice(0, 15);
+        // Mostrar top 12
+        const displayScores = scores.slice(0, 12);
         displayScores.forEach((entry, index) => {
             const y = 125 + index * 28;
 
