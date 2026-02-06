@@ -11,13 +11,13 @@ const firebaseConfig = {
     // 4. En las reglas, pon: { "rules": { ".read": true, ".write": true } }
     // 5. Copia tu configuración aquí abajo:
 
-    apiKey: "TU_API_KEY",
-    authDomain: "tu-proyecto.firebaseapp.com",
-    databaseURL: "https://tu-proyecto-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "tu-proyecto",
-    storageBucket: "tu-proyecto.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "tu-app-id"
+    apiKey: "AIzaSyAFbl1QfAwsGeQCvto4WAmbThtCtEQ4NhM",
+    authDomain: "la-venganza-del-profe-alvaro.firebaseapp.com",
+    databaseURL: "https://la-venganza-del-profe-alvaro-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "la-venganza-del-profe-alvaro",
+    storageBucket: "la-venganza-del-profe-alvaro.firebasestorage.app",
+    messagingSenderId: "999306931083",
+    appId: "1:999306931083:web:8a0e51b81e3bd59f881d8e"
 };
 
 // ==================== LEADERBOARD MANAGER ====================
