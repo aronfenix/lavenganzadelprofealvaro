@@ -1482,7 +1482,7 @@ class FinalScene extends Phaser.Scene {
         this.saveScore();
 
         // Posición de botones diferente según victoria/derrota
-        const buttonY = this.victory ? 470 : 340;
+        const buttonY = this.victory ? 570 : 340;
 
         // Botones
         this.createSmallButton(130, buttonY, 'MENU', () => {
@@ -1500,21 +1500,15 @@ class FinalScene extends Phaser.Scene {
             this.scene.start('LevelIntroScene', { level: 1 });
         });
 
-        // Input para nombre (solo en derrota para no sobrecargar la victoria)
-        if (this.score > 0 && !this.victory) {
+        // Input para nombre (victoria y derrota)
+        if (this.score > 0) {
             this.showNameInput();
-        }
-
-        // En victoria, guardar automáticamente como "CAMPEÓN"
-        if (this.victory && this.score > 0) {
-            this.nameInput = 'CAMPEON';
-            this.time.delayedCall(1000, () => this.saveName());
         }
     }
 
     showNameInput() {
-        const inputY = 365;
-        const containerY = 390;
+        const inputY = this.victory ? 420 : 365;
+        const containerY = this.victory ? 445 : 390;
 
         this.add.text(400, inputY, 'Introduce tu nombre:', {
             fontFamily: '"Press Start 2P"',
@@ -1555,7 +1549,7 @@ class FinalScene extends Phaser.Scene {
         this.nameContainer.add([inputBg, this.nameDisplay, saveBtn]);
 
         // Teclado virtual para tablets
-        this.createNameKeyboard();
+        this.createNameKeyboard(containerY + 50);
 
         // Keyboard input para PC
         this.input.keyboard.on('keydown', (event) => {
@@ -1571,9 +1565,9 @@ class FinalScene extends Phaser.Scene {
         });
     }
 
-    createNameKeyboard() {
+    createNameKeyboard(keyboardY) {
         // Teclado compacto que cabe en pantalla
-        this.keyboard = this.add.container(400, 490);
+        this.keyboard = this.add.container(400, keyboardY || 490);
 
         const keys = 'QWERTYUIOPASDFGHJKLZXCVBNM';
         const rows = [
